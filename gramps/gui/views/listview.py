@@ -33,7 +33,7 @@ import pickle
 import time
 import logging
 
-LOG = logging.getLogger('.gui.listview')
+LOG = logging.getLogger(__name__)
 
 #----------------------------------------------------------------
 #
@@ -253,7 +253,8 @@ class ListView(NavigationView):
             if self.model and self.model.color_column() is not None:
                 column.set_cell_data_func(self.renderer, self.foreground_color)
 
-            column.connect('clicked', self.column_clicked, index)
+            #column.connect('clicked', self.column_clicked, index)
+            column.set_sort_column_id(pair[1])
 
             column.set_resizable(True)
             column.set_clickable(True)
@@ -329,12 +330,13 @@ class ListView(NavigationView):
                 self.model.set_search(filter_info)
                 self.model.rebuild_data()
             
+            self.model.connect('rows-reordered', self.rows_reordered)
+
             cput1 = time.clock()
             self.build_columns()
             cput2 = time.clock()
             self.list.set_model(self.model)
             cput3 = time.clock()
-            self.__display_column_sort()
             self.goto_active(None)
 
             self.dirty = False
@@ -596,74 +598,13 @@ class ListView(NavigationView):
     ####################################################################
     # Signal handlers
     ####################################################################
-    def column_clicked(self, obj, data):
+    def rows_reordered(self, model, p1, p2, p3):
         """
-        Called when a column is clicked.
-
-        obj     A TreeViewColumn object of the column clicked
-        data    The column index
+        Called when the model is sorted.
         """
-        self.uistate.set_busy_cursor(True)
-        self.uistate.push_message(self.dbstate, _("Column clicked, sorting..."))
-        cput = time.clock()
-        same_col = False
-        if self.sort_col != data:
-            order = Gtk.SortType.ASCENDING
-        else:
-            same_col = True
-            if (self.columns[data].get_sort_order() == Gtk.SortType.DESCENDING
-                or not self.columns[data].get_sort_indicator()):
-                order = Gtk.SortType.ASCENDING
-            else:
-                order = Gtk.SortType.DESCENDING
-
-        self.sort_col = data
-        self.sort_order = order
-        handle = self.first_selected()
-
-        if not self.search_bar.is_visible():
-            filter_info = (True, self.generic_filter, False)
-        else:
-            value = self.search_bar.get_value()
-            filter_info = (False, value, value[0] in self.exact_search())
-
-        if same_col:
-            # activate when https://bugzilla.gnome.org/show_bug.cgi?id=684558
-            # is resolved
-            if False and (Gtk.get_major_version(), Gtk.get_minor_version()) >= (3,8):
-                self.model.reverse_order()
-            else:
-                ## GTK 3.6 rows_reordered not exposed by gi, we need to reconnect
-                ## model to obtain desired effect, but this collapses nodes ...
-                self.list.set_model(None)
-                self.model.reverse_order()
-                self.list.set_model(self.model)
-        else:
-            self.model = self.make_model(self.dbstate.db, self.sort_col, 
-                                         self.sort_order, 
-                                         search=filter_info, 
-                                         sort_map=self.column_order())
-
-            self.list.set_model(self.model)
-
-        self.__display_column_sort()
-
-        if handle:
-            self.goto_handle(handle)
-
-        # set the search column to be the sorted column
-        search_col = self.column_order()[data][1]
-        self.list.set_search_column(search_col)
-        
-        self.uistate.set_busy_cursor(False)
-        
-        LOG.debug('   ' + self.__class__.__name__ + ' column_clicked ' +
-                    str(time.clock() - cput) + ' sec')
-
-    def __display_column_sort(self):
-        for i, c in enumerate(self.columns):
-            c.set_sort_indicator(i == self.sort_col)
-        self.columns[self.sort_col].set_sort_order(self.sort_order)
+        store, paths = self.selection.get_selected_rows()
+        if paths:
+            self.list.scroll_to_cell(paths[0], None, 1, 0.5, 0)
 
     def connect_signals(self):
         """
