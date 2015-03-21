@@ -204,7 +204,6 @@ class DbBsddbTreeCursor(BsddbBaseCursor):
         to_do = [b'']
         while to_do:
             key = to_do.pop()
-            key = key.encode('utf-8') if not isinstance(key, bytes) else key
             data = self.set(key)
             while data:
                 ### FIXME: this is a dirty hack that works without no
@@ -215,8 +214,9 @@ class DbBsddbTreeCursor(BsddbBaseCursor):
                     payload = self.primary.get(data[1], txn=self.txn)
                 else:
                     payload = pickle.loads(data[1])
-                yield (payload[0], payload)
-                to_do.append(payload[0])
+                handle = payload[0].encode('utf-8')
+                yield (handle, payload)
+                to_do.append(handle)
                 data = _n()
 
 class DbBsddbRead(DbReadBase, Callback):

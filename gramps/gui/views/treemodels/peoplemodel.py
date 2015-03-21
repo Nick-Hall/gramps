@@ -45,7 +45,7 @@ from gi.repository import Gtk
 #
 #-------------------------------------------------------------------------
 import logging
-_LOG = logging.getLogger(".")
+_LOG = logging.getLogger(__name__)
 
 #-------------------------------------------------------------------------
 #
@@ -577,9 +577,6 @@ class PersonTreeModel(PeopleBaseModel, TreeBaseModel):
         """
         return [_('Group As'), _('Name')]
 
-    def column_header(self, node):
-        return node.name
-    
     def add_row(self, handle, data):
         """
         Add nodes to the node map for a single person.
@@ -591,14 +588,18 @@ class PersonTreeModel(PeopleBaseModel, TreeBaseModel):
         
         name_data = data[COLUMN_NAME]
         group_name = ngn(self.db, name_data)
-        #if isinstance(group_name, str):
-        #    group_name = group_name.encode('utf-8')
-        sort_key = self.sort_func(data)
 
         #if group_name not in self.group_list:
             #self.group_list.append(group_name)
             #self.add_node(None, group_name, group_name, None)
             
-        # add as node: parent, child, sortkey, handle; parent and child are 
-        # nodes in the treebasemodel, and will be used as iters
-        self.add_node(group_name, handle, sort_key, handle)
+        if group_name:
+            if group_name not in self.handle2iter:
+                row = [group_name] + [''] * (len(self.fmap) - 1) + [None]
+                self.handle2iter[group_name] = self.append(None, row)
+            parent_iter = self.handle2iter[group_name]
+        else:
+            parent_iter = None
+        row = self._get_row(data, handle)
+        self.handle2iter[handle] = self.append(parent_iter, row)
+

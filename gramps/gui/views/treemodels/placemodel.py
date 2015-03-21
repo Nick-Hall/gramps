@@ -30,7 +30,7 @@ Place Model.
 #
 #-------------------------------------------------------------------------
 import logging
-_LOG = logging.getLogger(".gui.views.treemodels.placemodel")
+_LOG = logging.getLogger(__name__)
 
 #-------------------------------------------------------------------------
 #
@@ -274,19 +274,14 @@ class PlaceTreeModel(PlaceBaseModel, TreeBaseModel):
         handle      The handle of the gramps object.
         data        The object data.
         """
-        sort_key = self.sort_func(data)
         if len(data[5]) > 0:
             parent = data[5][0][0]
         else:
             parent = None
 
-        # Add the node as a root node if the parent is not in the tree.  This
-        # will happen when the view is filtered.
-        if not self._get_node(parent):
-            parent = None
-
-        self.add_node(parent, handle, sort_key, handle, add_parent=False)
-
-    def column_header(self, data):
-        # should not get here!
-        return '????'
+        if parent:
+            parent_iter = self.handle2iter.get(parent)
+        else:
+            parent_iter = None
+        row = self._get_row(data, handle)
+        self.handle2iter[handle] = self.append(parent_iter, row)

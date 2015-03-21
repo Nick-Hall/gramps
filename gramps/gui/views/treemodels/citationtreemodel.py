@@ -28,9 +28,9 @@ CitationTreeModel classes for GRAMPS.
 # python modules
 #
 #-------------------------------------------------------------------------
+import time
 import logging
-log = logging.getLogger(".")
-LOG = logging.getLogger(".citation")
+_LOG = logging.getLogger(__name__)
 
 #-------------------------------------------------------------------------
 #
@@ -68,38 +68,36 @@ class CitationTreeModel(CitationBaseModel, TreeBaseModel):
     def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
                  skip=set(), sort_map=None):
         self.db = db
-        self.number_items = self.db.get_number_of_sources
-        self.map = self.db.get_raw_source_data
-        self.gen_cursor = self.db.get_source_cursor
-        # The items here must correspond, in order, with data in 
-        # CitationTreeView, and with the items in the secondary fmap, fmap2
+        self.number_items = self.db.get_number_of_citations
+        self.map = self.db.get_raw_citation_data
+        self.gen_cursor = self.db.get_citation_cursor
         self.fmap = [
-            self.source_src_title,   # COL_TITLE_PAGE (both Source & Citation)
-            self.source_src_id,      # COL_ID         (both Source & Citation)
-            None,                    # COL_DATE       (not for Source)
-            None,                    # COL_CONFIDENCE (not for Source)
-            self.source_src_private, # COL_PRIV       (both Source & Citation)
-            self.source_src_tags,    # COL_TAGS       (both Source & Citation)
-            self.source_src_chan,    # COL_CHAN       (both Source & Citation)
-            self.source_src_auth,    # COL_SRC_AUTH   (Source only)
-            self.source_src_abbr,    # COL_SRC_ABBR   (Source only)
-            self.source_src_pinfo,   # COL_SRC_PINFO  (Source only)
-            self.source_src_tag_color
+            self.citation_page,
+            self.citation_id,
+            self.citation_date,
+            self.citation_confidence,
+            self.citation_private,
+            self.citation_tags,
+            self.citation_change,
+            None,
+            None,
+            None,
+            self.citation_tag_color
             ]
         self.smap = [
-            self.source_src_title,
-            self.source_src_id,
+            self.citation_page,
+            self.citation_id,
+            self.citation_sort_date,
+            self.citation_confidence,
+            self.citation_private,
+            self.citation_tags,
+            self.citation_sort_change,
             self.dummy_sort_key,
             self.dummy_sort_key,
-            self.source_src_private,
-            self.source_src_tags,
-            self.source_sort2_change,
-            self.source_src_auth,
-            self.source_src_abbr,
-            self.source_src_pinfo,
-            self.source_src_tag_color
+            self.dummy_sort_key,
+            self.citation_tag_color
             ]
-        
+
         TreeBaseModel.__init__(self, self.db, scol=scol, order=order,
                                search=search, skip=skip, sort_map=sort_map,
                                nrgroups=1,
@@ -124,37 +122,36 @@ class CitationTreeModel(CitationBaseModel, TreeBaseModel):
         TreeBaseModel.destroy(self)
 
     def _set_base_data(self):
-        """See TreeBaseModel, for citations, most have been set in init of
-        CitationBaseModel
-        """
-        self.number_items2 = self.db.get_number_of_citations
-        self.map2 = self.db.get_raw_citation_data
-        self.gen_cursor2 = self.db.get_citation_cursor
+        self.number_items2 = self.db.get_number_of_sources
+        self.map2 = self.db.get_raw_source_data
+        self.gen_cursor2 = self.db.get_source_cursor
+        # The items here must correspond, in order, with data in 
+        # CitationTreeView, and with the items in the secondary fmap, fmap2
         self.fmap2 = [
-            self.citation_page,
-            self.citation_id,
-            self.citation_date,
-            self.citation_confidence,
-            self.citation_private,
-            self.citation_tags,
-            self.citation_change,
-            None,
-            None,
-            None,
-            self.citation_tag_color
+            self.source_src_title,   # COL_TITLE_PAGE (both Source & Citation)
+            self.source_src_id,      # COL_ID         (both Source & Citation)
+            None,                    # COL_DATE       (not for Source)
+            None,                    # COL_CONFIDENCE (not for Source)
+            self.source_src_private, # COL_PRIV       (both Source & Citation)
+            self.source_src_tags,    # COL_TAGS       (both Source & Citation)
+            self.source_src_chan,    # COL_CHAN       (both Source & Citation)
+            self.source_src_auth,    # COL_SRC_AUTH   (Source only)
+            self.source_src_abbr,    # COL_SRC_ABBR   (Source only)
+            self.source_src_pinfo,   # COL_SRC_PINFO  (Source only)
+            self.source_src_tag_color
             ]
         self.smap2 = [
-            self.citation_page,
-            self.citation_id,
-            self.citation_sort_date,
-            self.citation_confidence,
-            self.citation_private,
-            self.citation_tags,
-            self.citation_sort_change,
+            self.source_src_title,
+            self.source_src_id,
             self.dummy_sort_key,
             self.dummy_sort_key,
-            self.dummy_sort_key,
-            self.citation_tag_color
+            self.source_src_private,
+            self.source_src_tags,
+            self.source_sort2_change,
+            self.source_src_auth,
+            self.source_src_abbr,
+            self.source_src_pinfo,
+            self.source_src_tag_color
             ]
 
     def color_column(self):
@@ -169,46 +166,30 @@ class CitationTreeModel(CitationBaseModel, TreeBaseModel):
         """
         return [_('Source'), _('Citation')]
 
-    def add_row(self, handle, data):
-        """
-        Add source nodes to the node map.
+    def _get_row(self, data, handle, fmap):
+        row = []
+        for col, col_func in enumerate(fmap):
+            if col in self.exclude:
+                row.append(None)
+            else:
+                if col_func is not None:
+                    row.append(col_func(data))
+                else:
+                    row.append('')
+        row.append(handle)
+        return row
 
-        handle      The handle of the gramps object.
-        data        The object data.
-        """
-        sort_key = self.sort_func(data)
-        self.add_node(None, handle, sort_key, handle)
-
-    def add_row2(self, handle, data):
-        """
-        Add citation nodes to the node map.
-
-        handle      The handle of the gramps object.
-        data        The object data.
-        """
-        sort_key = self.sort_func2(data)
-        # If the source for this citation already exists (in the tree model) we
-        # add the citation as a child of the source. Otherwise we add the source
-        # first (because citations don't have any meaning without the associated
-        # source)
-        if self._get_node(data[5]):
-            #             parent   child   sortkey   handle
-            self.add_node(data[5], handle, sort_key, handle, secondary=True)
+    def _add_node(self, parent, handle, data, fmap):
+        if parent is not None:
+            parent_iter = self.handle2iter[parent]
         else:
-            # add the source node first
-            source_sort_key = self.sort_func(self.map(data[5]))
-            #            parent child    sortkey          handle
-            self.add_node(None, data[5], source_sort_key, data[5])
-            
-            #            parent    child   sortkey   handle
-            self.add_node(data[5], handle, sort_key, handle, secondary=True)
+            parent_iter = None
+        row = self._get_row(data, handle, fmap)
+        self.handle2iter[handle] = self.append(parent_iter, row)
 
-    def on_get_n_columns(self):
-        return len(self.fmap)+1
-
-    def column_header(self, node):
-        """
-        Return a column heading.  This is called for nodes with no associated      
-        Gramps handle.
-        """
-        return node.name
+    def add_row(self, handle, data):
+        if data[5] in self.handle2iter:
+            self._add_node(data[5], handle, data, self.fmap)
+        else:
+            self._add_node(None, data[5], self.map2(data[5]), self.fmap2)
+            self._add_node(data[5], handle, data, self.fmap)
