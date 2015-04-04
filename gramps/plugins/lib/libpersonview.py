@@ -95,21 +95,21 @@ class BasePersonView(ListView):
     COL_CHAN = 14
     # column definitions
     COLUMNS = [
-        (_('Name'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Gender'), TEXT, None),
-        (_('Birth Date'), MARKUP, None),
-        (_('Birth Place'), MARKUP, None),
-        (_('Death Date'), MARKUP, None),
-        (_('Death Place'), MARKUP, None),
-        (_('Spouse'), TEXT, None),
-        (_('Number of Parents'), TEXT, 'gramps-parents'),
-        (_('Number of Marriages'), TEXT, 'gramps-family'),
-        (_('Number of Children'), TEXT, 'gramps-relation'),
-        (_('Number of To Do Notes'), TEXT, 'gramps-notes'),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
+        (_('Name'), TEXT, None, 16),
+        (_('ID'), TEXT, None, None),
+        (_('Gender'), TEXT, None, None),
+        (_('Birth Date'), MARKUP, None, 17),
+        (_('Birth Place'), MARKUP, None, None),
+        (_('Death Date'), MARKUP, None, 18),
+        (_('Death Place'), MARKUP, None, None),
+        (_('Spouse'), TEXT, None, None),
+        (_('Number of Parents'), TEXT, 'gramps-parents', None),
+        (_('Number of Marriages'), TEXT, 'gramps-family', None),
+        (_('Number of Children'), TEXT, 'gramps-relation', None),
+        (_('Number of To Do Notes'), TEXT, 'gramps-notes', None),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 19),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

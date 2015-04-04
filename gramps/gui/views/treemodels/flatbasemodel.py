@@ -43,12 +43,13 @@ from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
-from gramps.gen.filters import SearchFilter, ExactSearchFilter
-from gramps.gen.constfunc import handle2internal
 from gramps.gen.const import GRAMPS_LOCALE as glocale
+_ = glocale.translation.gettext
+import gramps.gui.widgets.progressdialog as progressdlg
+from gramps.gen.filters import SearchFilter, ExactSearchFilter
 
 #-------------------------------------------------------------------------
 #
@@ -58,23 +59,17 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 class FlatBaseModel(Gtk.ListStore):
     """
     The base class for all flat treeview models. 
-    ..Note: glocale.sort_key is applied to the underlying sort key,
-            so as to have localized sort
     """
-
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING,
-                 search=None, skip=set(), sort_map=None):
+    def __init__(self, db, search=None, skip=set()):
 
         Gtk.ListStore.__init__(self)
-        self.set_column_types([str] * (len(self.fmap) + 1))
+        self.set_column_types(self._column_types)
 
         cput = time.clock()
 
         self.db = db
         self.skip = skip
-        self.exclude = [col[1] for col in sort_map if col[0] == 0]
         self.handle2iter = {}
-        self._in_build = False
 
         self.set_search(search)
         self.rebuild_data()
@@ -100,11 +95,11 @@ class FlatBaseModel(Gtk.ListStore):
           with the new entries
         """
         if search:
-            if search[0]:
+            if search[0] == 1: # Filter
                 #following is None if no data given in filter sidebar
                 self.search = search[1]
                 self.rebuild_data = self._rebuild_filter
-            else:
+            elif search[0] == 0: # Search
                 if search[1]: # Search from topbar in columns
                     # we have search[1] = (index, text_unicode, inversion)
                     col = search[1][0]
@@ -117,6 +112,9 @@ class FlatBaseModel(Gtk.ListStore):
                         self.search = SearchFilter(func, text, inv)
                 else:
                     self.search = None
+                self.rebuild_data = self._rebuild_search
+            else: # Fast Filter
+                self.search = search[1]
                 self.rebuild_data = self._rebuild_search
         else:
             self.search = None
@@ -140,21 +138,11 @@ class FlatBaseModel(Gtk.ListStore):
         """
         return None
 
-    def clear_cache(self, handle=None):
-        """
-        If you use a cache, overwrite here so it is cleared when this 
-        method is called (on rebuild)
-        :param handle: if None, clear entire cache, otherwise clear the handle
-                       entry if present
-        """
-        pass
-
     def _rebuild_search(self):
         """ function called when view must be build, given a search text
             in the top search bar
         """
         self.clear()
-        self.clear_cache()
         self.handle2iter = {}
         if self.db.is_open():
             if self.search is not None:
@@ -162,19 +150,18 @@ class FlatBaseModel(Gtk.ListStore):
                     handle = key.decode('utf8')
                     if (self.search.match(data, self.db) 
                         and handle not in self.skip):
-                        self.__add(data, handle)
+                        self._add(data, handle)
             else:
                 for key, data in self.gen_cursor():
                     handle = key.decode('utf8')
                     if handle not in self.skip:
-                        self.__add(data, handle)
+                        self._add(data, handle)
 
     def _rebuild_filter(self):
         """ function called when view must be build, given filter options
             in the filter sidebar
         """
         self.clear()
-        self.clear_cache()
         self.handle2iter = {}
         if self.db.is_open():
             if self.search is not None:
@@ -183,25 +170,22 @@ class FlatBaseModel(Gtk.ListStore):
                     if key in dlist:
                         handle = key.decode('utf8')
                         if handle not in self.skip:
-                            self.__add(data, handle)
+                            self._add(data, handle)
             else:
                 for key, data in self.gen_cursor():
                     handle = key.decode('utf8')
                     if handle not in self.skip:
-                        self.__add(data, handle)
+                        self._add(data, handle)
 
-    def __get_row(self, data, handle):
+    def _get_row(self, data, handle):
         row = []
         for col, col_func in enumerate(self.fmap):
-            if col in self.exclude:
-                row.append('EMPTY')
-            else:
-                row.append(col_func(data))
+            row.append(col_func(data))
         row.append(handle)
         return row
 
-    def __add(self, data, handle):
-        row = self.__get_row(data, handle)
+    def _add(self, data, handle):
+        row = self._get_row(data, handle)
         self.handle2iter[handle] = self.append(row)
 
     def add_row_by_handle(self, handle):
@@ -209,7 +193,7 @@ class FlatBaseModel(Gtk.ListStore):
         Add a row. This is called after object with handle is created.
         Row is only added if search/filter data is such that it must be shown
         """
-        self.__add(self.map(handle), handle)
+        self._add(self.map(handle), handle)
 
     def delete_row_by_handle(self, handle):
         """
@@ -223,9 +207,8 @@ class FlatBaseModel(Gtk.ListStore):
         """
         Update a row, called after the object with handle is changed
         """
-        self.clear_cache(handle)
         iter = self.get_iter_from_handle(handle)
-        self.set_row(iter, self.__get_row(self.map(handle), handle))
+        self.set_row(iter, self._get_row(self.map(handle), handle))
 
     def get_iter_from_handle(self, handle):
         """
@@ -237,4 +220,4 @@ class FlatBaseModel(Gtk.ListStore):
         """
         Get the gramps handle for an iter.
         """
-        return self.get_value(iter, len(self.fmap))
+        return self.get_value(iter, len(self._column_types) - 1)

@@ -82,21 +82,21 @@ class RepositoryView(ListView):
 
     # column definitions
     COLUMNS = [
-        (_('Name'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Type'), TEXT, None),
-        (_('Home URL'), TEXT, None),
-        (_('Street'), TEXT, None),
-        (_('Locality'), TEXT, None),
-        (_('City'), TEXT, None),
-        (_('State/County'), TEXT, None),
-        (_('Country'), TEXT, None),
-        (_('ZIP/Postal Code'), TEXT, None),
-        (_('Email'), TEXT, None),
-        (_('Search URL'), TEXT, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
+        (_('Name'), TEXT, None, None),
+        (_('ID'), TEXT, None, None),
+        (_('Type'), TEXT, None, None),
+        (_('Home URL'), TEXT, None, None),
+        (_('Street'), TEXT, None, None),
+        (_('Locality'), TEXT, None, None),
+        (_('City'), TEXT, None, None),
+        (_('State/County'), TEXT, None, None),
+        (_('Country'), TEXT, None, None),
+        (_('ZIP/Postal Code'), TEXT, None, None),
+        (_('Email'), TEXT, None, None),
+        (_('Search URL'), TEXT, None, None),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 16),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

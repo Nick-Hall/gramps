@@ -54,8 +54,7 @@ from .flatbasemodel import FlatBaseModel
 #-------------------------------------------------------------------------
 class MediaModel(FlatBaseModel):
 
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, search=None, skip=set()):
         self.gen_cursor = db.get_media_cursor
         self.map = db.get_raw_object_data
         
@@ -71,19 +70,26 @@ class MediaModel(FlatBaseModel):
             self.column_tag_color,
             ]
         
-        self.smap = [
-            self.column_description,
-            self.column_id,
-            self.column_mime,
-            self.column_path,
-            self.sort_date,
-            self.column_private,
-            self.column_tags,
-            self.sort_change,
-            self.column_tag_color,
-            ]
-        FlatBaseModel.__init__(self, db, scol, order, search=search, skip=skip,
-                               sort_map=sort_map)
+        self._column_types = [str, str, str, str, str, str, str, str, str, int,
+                              int, str]
+
+        FlatBaseModel.__init__(self, db, search, skip)
+
+    def _get_row(self, data, handle):
+        row = [None] * len(self._column_types)
+        row[0] = self.column_description(data)
+        row[1] = self.column_id(data)
+        row[2] = self.column_mime(data)
+        row[3] = self.column_path(data)
+        row[4] = self.column_date(data)
+        row[5] = self.column_private(data)
+        row[6] = self.column_tags(data)
+        row[7] = self.column_change(data)
+        row[8] = self.column_tag_color(data)
+        row[9] = self.sort_date(data)
+        row[10] = self.sort_change(data)
+        row[11] = handle
+        return row
 
     def destroy(self):
         """
@@ -93,7 +99,6 @@ class MediaModel(FlatBaseModel):
         self.gen_cursor = None
         self.map = None
         self.fmap = None
-        self.smap = None
         FlatBaseModel.destroy(self)
 
     def color_column(self):
@@ -102,44 +107,29 @@ class MediaModel(FlatBaseModel):
         """
         return 8
 
-    def on_get_n_columns(self):
-        return len(self.fmap)+1
+    def total(self):
+        """
+        Total number of items.
+        """
+        return self.db.get_number_of_media_objects()
 
     def column_description(self, data):
-        descr = data[4]
-        if isinstance(descr, str):
-            return descr
-        try:
-            return str(descr)
-        except:
-            return conv_to_unicode(descr, 'latin1')
+        return data[4]
 
     def column_path(self, data):
-        path = data[2]
-        if isinstance(path, str):
-            return path
-        try:
-            return str(path)
-        except:
-            return str(path.encode('iso-8859-1'))
+        return data[2]
 
     def column_mime(self, data):
-        mime = data[3]
-        if mime and isinstance(mime, str):
-            return mime
-        if mime:
-            return str(mime)
-        else:
-            return _('Note')
+        return data[3] if data[3] else _('Note')
 
     def column_id(self,data):
-        return str(data[1])
+        return data[1]
 
     def column_date(self,data):
         if data[10]:
             date = Date()
             date.unserialize(data[10])
-            return str(displayer.display(date))
+            return displayer.display(date)
         return ''
 
     def sort_date(self,data):
@@ -147,12 +137,9 @@ class MediaModel(FlatBaseModel):
         obj.unserialize(data)
         d = obj.get_date_object()
         if d:
-            return "%09d" % d.get_sort_value()
+            return d.get_sort_value()
         else:
-            return ''
-
-    def column_handle(self,data):
-        return str(data[0])
+            return 0
 
     def column_private(self, data):
         if data[12]:
@@ -162,13 +149,10 @@ class MediaModel(FlatBaseModel):
             return ''
 
     def sort_change(self,data):
-        return "%012x" % data[9]
+        return data[9]
 
     def column_change(self,data):
         return format_time(data[9])
-
-    def column_tooltip(self,data):
-        return 'Media tooltip'
 
     def get_tag_name(self, tag_handle):
         """

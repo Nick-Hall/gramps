@@ -49,8 +49,7 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 #-------------------------------------------------------------------------
 class SourceModel(FlatBaseModel):
 
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, search=None, skip=set()):
         self.map = db.get_raw_source_data
         self.gen_cursor = db.get_source_cursor
         self.fmap = [
@@ -64,19 +63,26 @@ class SourceModel(FlatBaseModel):
             self.column_change,
             self.column_tag_color
             ]
-        self.smap = [
-            self.column_title,
-            self.column_id,
-            self.column_author,
-            self.column_abbrev,
-            self.column_pubinfo,
-            self.column_private,
-            self.column_tags,
-            self.sort_change,
-            self.column_tag_color
-            ]
-        FlatBaseModel.__init__(self, db, scol, order, search=search, skip=skip,
-                               sort_map=sort_map)
+
+        self._column_types = [str, str, str, str, str, str, str, str, str, int,
+                              str]
+
+        FlatBaseModel.__init__(self, db, search, skip)
+
+    def _get_row(self, data, handle):
+        row = [None] * len(self._column_types)
+        row[0] = self.column_title(data)
+        row[1] = self.column_id(data)
+        row[2] = self.column_author(data)
+        row[3] = self.column_abbrev(data)
+        row[4] = self.column_pubinfo(data)
+        row[5] = self.column_private(data)
+        row[6] = self.column_tags(data)
+        row[7] = self.column_change(data)
+        row[8] = self.column_tag_color(data)
+        row[9] = self.sort_change(data)
+        row[10] = handle
+        return row
 
     def destroy(self):
         """
@@ -86,7 +92,6 @@ class SourceModel(FlatBaseModel):
         self.gen_cursor = None
         self.map = None
         self.fmap = None
-        self.smap = None
         FlatBaseModel.destroy(self)
 
     def color_column(self):
@@ -95,23 +100,26 @@ class SourceModel(FlatBaseModel):
         """
         return 8
 
-    def on_get_n_columns(self):
-        return len(self.fmap)+1
+    def total(self):
+        """
+        Total number of items.
+        """
+        return self.db.get_number_of_sources()
 
     def column_title(self,data):
-        return str(data[2])
+        return data[2]
 
     def column_author(self,data):
-        return str(data[3])
+        return data[3]
 
     def column_abbrev(self,data):
-        return str(data[7])
+        return data[7]
 
     def column_id(self,data):
-        return str(data[1])
+        return data[1]
 
     def column_pubinfo(self,data):
-        return str(data[4])
+        return data[4]
 
     def column_private(self, data):
         if data[12]:
@@ -124,7 +132,7 @@ class SourceModel(FlatBaseModel):
         return format_time(data[8])
     
     def sort_change(self,data):
-        return "%012x" % data[8]
+        return data[8]
 
     def get_tag_name(self, tag_handle):
         """

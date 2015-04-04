@@ -96,9 +96,6 @@ class PeopleBaseModel(object):
     """
     _GENDER = [ _('female'), _('male'), _('unknown') ]
 
-    # LRU cache size
-    _CACHE_SIZE = 250
-
     def __init__(self, db):
         """
         Initialize the model building the initial data
@@ -125,32 +122,37 @@ class PeopleBaseModel(object):
             self.column_change,
             self.column_tag_color,
             ]
-        self.smap = [
-            self.sort_name,
-            self.column_id,
-            self.column_gender,
-            self.sort_birth_day,
-            self.column_birth_place,
-            self.sort_death_day,
-            self.column_death_place,
-            self.column_spouse,
-            self.sort_parents,
-            self.sort_marriages,
-            self.sort_children,
-            self.sort_todo,
-            self.column_private,
-            self.column_tags,
-            self.sort_change,
-            self.column_tag_color,
-            ]
+            
+        self._column_types = [str, str, str, str, str, str, str, str, int, int,
+                              int, int, str, str, str, str, str, int, int, int,
+                              str]
 
-        #columns are accessed on every mouse over, so it is worthwhile to
-        #cache columns visible in one screen to avoid expensive database 
-        #lookup of derived values
-        self.lru_name  = LRU(PeopleBaseModel._CACHE_SIZE)
-        self.lru_spouse = LRU(PeopleBaseModel._CACHE_SIZE)
-        self.lru_bdate = LRU(PeopleBaseModel._CACHE_SIZE)
-        self.lru_ddate = LRU(PeopleBaseModel._CACHE_SIZE)
+    def _get_row(self, data, handle):
+        row = [None] * len(self._column_types)
+        row[0] = self.column_name(data)
+        row[1] = self.column_id(data)
+        row[2] = self.column_gender(data)
+        bsortval, bdate, bplace = self._get_data(data, 'birth')
+        row[3] = bdate
+        row[4] = bplace
+        dsortval, ddate, dplace = self._get_data(data, 'death')
+        row[5] = ddate
+        row[6] = dplace
+        row[7] = self.column_spouse(data)
+        row[8] = self.column_parents(data)
+        row[9] = self.column_marriages(data)
+        row[10] = self.column_children(data)
+        row[11] = self.column_todo(data)
+        row[12] = self.column_private(data)
+        row[13] = self.column_tags(data)
+        row[14] = self.column_change(data)
+        row[15] = self.column_tag_color(data)
+        row[16] = self.sort_name(data)
+        row[17] = bsortval
+        row[18] = dsortval
+        row[19] = self.sort_change(data)
+        row[20] = handle
+        return row
 
     def destroy(self):
         """
@@ -160,8 +162,6 @@ class PeopleBaseModel(object):
         self.gen_cursor = None
         self.map = None
         self.fmap = None
-        self.smap = None
-        self.clear_local_cache()
 
     def color_column(self):
         """
@@ -169,64 +169,17 @@ class PeopleBaseModel(object):
         """
         return 15
 
-    def clear_local_cache(self, handle=None):
-        """ Clear the LRU cache """
-        if handle:
-            try:
-                del self.lru_name[handle]
-            except KeyError:
-                pass
-            try:
-                del self.lru_spouse[handle]
-            except KeyError:
-                pass
-            try:
-                del self.lru_bdate[handle]
-            except KeyError:
-                pass
-            try:
-                del self.lru_ddate[handle]
-            except KeyError:
-                pass
-        else:
-            self.lru_name.clear()
-            self.lru_spouse.clear()
-            self.lru_bdate.clear()
-            self.lru_ddate.clear()
-
-    def on_get_n_columns(self):
-        """ Return the number of columns in the model """
-        return len(self.fmap)+1
+    def total(self):
+        """
+        Total number of items.
+        """
+        return self.db.get_number_of_people()
 
     def sort_name(self, data):
-        name = name_displayer.raw_sorted_name(data[COLUMN_NAME])
-        # internally we work with utf-8
-        if not isinstance(name, str):
-            name = name.decode('utf-8')
-        return name
+        return name_displayer.raw_sorted_name(data[COLUMN_NAME])
 
     def column_name(self, data):
-        handle = data[0]
-        if handle in self.lru_name:
-            name = self.lru_name[handle]
-        else:
-            name = name_displayer.raw_display_name(data[COLUMN_NAME])
-            # internally we work with utf-8 for python 2.7
-            if not isinstance(name, str):
-                name = name.encode('utf-8')
-            if not self._in_build:
-                self.lru_name[handle] = name
-        return name
-
-    def column_spouse(self, data):
-        handle = data[0]
-        if handle in self.lru_spouse:
-            value = self.lru_spouse[handle]
-        else:
-            value = self._get_spouse_data(data)
-            if not self._in_build:
-                self.lru_spouse[handle] = value
-        return value
+        return name_displayer.raw_display_name(data[COLUMN_NAME])
 
     def column_private(self, data):
         if data[COLUMN_PRIV]:
@@ -235,7 +188,7 @@ class PeopleBaseModel(object):
             # There is a problem returning None here.
             return ''
     
-    def _get_spouse_data(self, data):
+    def column_spouse(self, data):
         spouses_names = ""
         for family_handle in data[COLUMN_FAMILY]:
             family = self.db.get_family_from_handle(family_handle)
@@ -255,7 +208,7 @@ class PeopleBaseModel(object):
         return data[COLUMN_ID]
 
     def sort_change(self,data):
-        return "%012x" % data[COLUMN_CHANGE]
+        return data[COLUMN_CHANGE]
 
     def column_change(self, data):
         return format_time(data[COLUMN_CHANGE])
@@ -264,174 +217,69 @@ class PeopleBaseModel(object):
         return PeopleBaseModel._GENDER[data[COLUMN_GENDER]]
 
     def column_birth_day(self, data):
-        handle = data[0]
-        if handle in self.lru_bdate:
-            value = self.lru_bdate[handle]
-        else:
-            value = self._get_birth_data(data, False)
-            if not self._in_build:
-                self.lru_bdate[handle] = value
-        return value
-        
-    def sort_birth_day(self, data):
-        handle = data[0]
-        return self._get_birth_data(data, True)
-
-    def _get_birth_data(self, data, sort_mode):
-        index = data[COLUMN_BIRTH]
-        if index != -1:
-            try:
-                local = data[COLUMN_EVENT][index]
-                b = EventRef()
-                b.unserialize(local)
-                birth = self.db.get_event_from_handle(b.ref)
-                if sort_mode:
-                    retval = "%09d" % birth.get_date_object().get_sort_value()
-                else:
-                    date_str = get_date(birth)
-                    if date_str != "":
-                        retval = escape(date_str)
-                if not get_date_valid(birth):
-                    return invalid_date_format % retval
-                else:
-                    return retval
-            except:
-                return ''
-        
-        for event_ref in data[COLUMN_EVENT]:
-            er = EventRef()
-            er.unserialize(event_ref)
-            event = self.db.get_event_from_handle(er.ref)
-            etype = event.get_type()
-            date_str = get_date(event)
-            if (etype in [EventType.BAPTISM, EventType.CHRISTEN]
-                and er.get_role() == EventRoleType.PRIMARY
-                and date_str != ""):
-                if sort_mode:
-                    retval = "%09d" % event.get_date_object().get_sort_value()
-                else:
-                    retval = "<i>%s</i>" % escape(date_str)
-                if not get_date_valid(event):
-                    return invalid_date_format % retval
-                else:
-                    return retval
-        
-        return ""
-
-    def column_death_day(self, data):
-        handle = data[0]
-        if handle in self.lru_ddate:
-            value = self.lru_ddate[handle]
-        else:
-            value = self._get_death_data(data, False)
-            if not self._in_build:
-                self.lru_ddate[handle] = value
-        return value
-        
-    def sort_death_day(self, data):
-        handle = data[0]
-        return self._get_death_data(data, True)
-
-    def _get_death_data(self, data, sort_mode):
-        index = data[COLUMN_DEATH]
-        if index != -1:
-            try:
-                local = data[COLUMN_EVENT][index]
-                ref = EventRef()
-                ref.unserialize(local)
-                event = self.db.get_event_from_handle(ref.ref)
-                if sort_mode:
-                    retval = "%09d" % event.get_date_object().get_sort_value()
-                else:
-                    date_str = get_date(event)
-                    if date_str != "":
-                        retval = escape(date_str)
-                if not get_date_valid(event):
-                    return invalid_date_format % retval
-                else:
-                    return retval
-            except:
-                return ''
-        
-        for event_ref in data[COLUMN_EVENT]:
-            er = EventRef()
-            er.unserialize(event_ref)
-            event = self.db.get_event_from_handle(er.ref)
-            etype = event.get_type()
-            date_str = get_date(event)
-            if (etype in [EventType.BURIAL,
-                          EventType.CREMATION,
-                          EventType.CAUSE_DEATH]
-                and er.get_role() == EventRoleType.PRIMARY
-                and date_str):
-                if sort_mode:
-                    retval = "%09d" % event.get_date_object().get_sort_value()
-                else:
-                    retval = "<i>%s</i>" % escape(date_str)
-                if not get_date_valid(event):
-                    return invalid_date_format % retval
-                else:
-                    return retval
-        return ""
+        return self._get_data(data, 'birth')[1]
 
     def column_birth_place(self, data):
-        index = data[COLUMN_BIRTH]
-        if index != -1:
-            try:
-                local = data[COLUMN_EVENT][index]
-                br = EventRef()
-                br.unserialize(local)
-                event = self.db.get_event_from_handle(br.ref)
-                if event:
-                    place_title = place_displayer.display_event(self.db, event)
-                    if place_title:
-                        return escape(place_title)
-            except:
-                return ''
-        
-        for event_ref in data[COLUMN_EVENT]:
-            er = EventRef()
-            er.unserialize(event_ref)
-            event = self.db.get_event_from_handle(er.ref)
-            etype = event.get_type()
-            if (etype in [EventType.BAPTISM, EventType.CHRISTEN] and
-                er.get_role() == EventRoleType.PRIMARY):
+        return self._get_data(data, 'birth')[2]
 
-                    place_title = place_displayer.display_event(self.db, event)
-                    if place_title:
-                        return "<i>%s</i>" % escape(place_title)
-        return ""
+    def column_death_day(self, data):
+        return self._get_data(data, 'death')[1]
 
     def column_death_place(self, data):
-        index = data[COLUMN_DEATH]
+        return self._get_data(data, 'death')[2]
+
+    def _get_data(self, data, event_type):
+        if event_type == 'birth':
+            index = data[COLUMN_BIRTH]
+            fallbacks = [EventType.BAPTISM, EventType.CHRISTEN]
+        else:
+            index = data[COLUMN_DEATH]
+            fallbacks = [EventType.BURIAL, EventType.CREMATION,
+                         EventType.CAUSE_DEATH]
         if index != -1:
             try:
                 local = data[COLUMN_EVENT][index]
-                dr = EventRef()
-                dr.unserialize(local)
-                event = self.db.get_event_from_handle(dr.ref)
-                if event:
-                    place_title = place_displayer.display_event(self.db, event)
-                    if place_title:
-                        return escape(place_title)
+
+                b = EventRef()
+                b.unserialize(local)
+                event = self.db.get_event_from_handle(b.ref)
+
+                sortval = event.get_date_object().get_sort_value()
+                date_str = get_date(event)
+                if date_str != "":
+                    retval = cgi.escape(date_str)
+                if not get_date_valid(event):
+                    retval = invalid_date_format % retval
+                place_title = place_displayer.display_event(self.db, event)
+                if place_title:
+                    place_title = "<i>%s</i>" % cgi.escape(place_title)
+                return (sortval, retval, place_title)
+
             except:
-                return ''
+                return (0, '', '')
         
         for event_ref in data[COLUMN_EVENT]:
             er = EventRef()
             er.unserialize(event_ref)
             event = self.db.get_event_from_handle(er.ref)
             etype = event.get_type()
-            if (etype in [EventType.BURIAL, EventType.CREMATION,
-                          EventType.CAUSE_DEATH]
-                and er.get_role() == EventRoleType.PRIMARY):
+            date_str = get_date(event)
+            if (etype in fallbacks
+                and er.get_role() == EventRoleType.PRIMARY
+                and date_str != ""):
 
-                    place_title = place_displayer.display_event(self.db, event)
-                    if place_title:
-                        return "<i>%s</i>" % escape(place_title)
-        return ""
+                sortval = event.get_date_object().get_sort_value()
+                retval = "<i>%s</i>" % cgi.escape(date_str)
+                if not get_date_valid(event):
+                    retval = invalid_date_format % retval
+                place_title = place_displayer.display_event(self.db, event)
+                if place_title:
+                    place_title = "<i>%s</i>" % cgi.escape(place_title)
+                return (sortval, retval, place_title)
 
-    def _get_parents_data(self, data):
+        return (0, '', '')
+
+    def column_parents(self, data):
         parents = 0
         if data[COLUMN_PARENT]:
             family = self.db.get_family_from_handle(data[COLUMN_PARENT][0])
@@ -441,7 +289,7 @@ class PeopleBaseModel(object):
                 parents += 1
         return parents
 
-    def _get_marriages_data(self, data):
+    def column_marriages(self, data):
         marriages = 0
         for family_handle in data[COLUMN_FAMILY]:
             family = self.db.get_family_from_handle(family_handle)
@@ -449,7 +297,7 @@ class PeopleBaseModel(object):
                 marriages += 1
         return marriages
 
-    def _get_children_data(self, data):
+    def column_children(self, data):
         children = 0
         for family_handle in data[COLUMN_FAMILY]:
             family = self.db.get_family_from_handle(family_handle)
@@ -459,37 +307,13 @@ class PeopleBaseModel(object):
                     children += 1
         return children
 
-    def _get_todo_data(self, data):
+    def column_todo(self, data):
         todo = 0
         for note_handle in data[COLUMN_NOTES]:
             note = self.db.get_note_from_handle(note_handle)
             if int(note.get_type()) == NoteType.TODO:
                 todo += 1
         return todo
-
-    def column_parents(self, data):
-        return str(self._get_parents_data(data))
-
-    def sort_parents(self, data):
-        return '%06d' % self._get_parents_data(data)
-
-    def column_marriages(self, data):
-        return str(self._get_marriages_data(data))
-
-    def sort_marriages(self, data):
-        return '%06d' % self._get_marriages_data(data)
-
-    def column_children(self, data):
-        return str(self._get_children_data(data))
-
-    def sort_children(self, data):
-        return '%06d' % self._get_children_data(data)
-
-    def column_todo(self, data):
-        return str(self._get_todo_data(data))
-
-    def sort_todo(self, data):
-        return '%06d' % self._get_todo_data(data)
 
     def get_tag_name(self, tag_handle):
         """
@@ -523,15 +347,9 @@ class PersonListModel(PeopleBaseModel, FlatBaseModel):
     """
     Listed people model.
     """
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, search=None, skip=set()):
         PeopleBaseModel.__init__(self, db)
-        FlatBaseModel.__init__(self, db, search=search, skip=skip, scol=scol,
-                               order=order, sort_map=sort_map)
-
-    def clear_cache(self, handle=None):
-        """ Clear the LRU cache """
-        PeopleBaseModel.clear_local_cache(self, handle)
+        FlatBaseModel.__init__(self, db, search, skip)
 
     def destroy(self):
         """
@@ -544,12 +362,10 @@ class PersonTreeModel(PeopleBaseModel, TreeBaseModel):
     """
     Hierarchical people model.
     """
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, search=None, skip=set()):
 
         PeopleBaseModel.__init__(self, db)
-        TreeBaseModel.__init__(self, db, search=search, skip=skip, scol=scol,
-                               order=order, sort_map=sort_map)
+        TreeBaseModel.__init__(self, db, search, skip)
 
     def destroy(self):
         """
@@ -563,13 +379,6 @@ class PersonTreeModel(PeopleBaseModel, TreeBaseModel):
         """See TreeBaseModel, we also set some extra lru caches
         """
         self.number_items = self.db.get_number_of_people
-
-    def clear_cache(self, handle=None):
-        """ Clear the LRU cache 
-        overwrite of base methods
-        """
-        TreeBaseModel.clear_cache(self, handle)
-        PeopleBaseModel.clear_local_cache(self, handle)
 
     def get_tree_levels(self):
         """
@@ -593,9 +402,11 @@ class PersonTreeModel(PeopleBaseModel, TreeBaseModel):
             #self.group_list.append(group_name)
             #self.add_node(None, group_name, group_name, None)
             
-        if group_name:
+        if group_name is not None:
             if group_name not in self.handle2iter:
-                row = [group_name] + [''] * (len(self.fmap) - 1) + [None]
+                row = [group_name, None, None, None, None, None, None,
+                       None, None, None, None, None, None, None, None,
+                       '#000000000000', None, None, None, None, None]
                 self.handle2iter[group_name] = self.append(None, row)
             parent_iter = self.handle2iter[group_name]
         else:

@@ -92,14 +92,14 @@ class MediaView(ListView):
     
     # column definitions
     COLUMNS = [
-        (_('Title'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Type'), TEXT, None),
-        (_('Path'), TEXT, None),
-        (_('Date'), TEXT, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
+        (_('Title'), TEXT, None, None),
+        (_('ID'), TEXT, None, None),
+        (_('Type'), TEXT, None, None),
+        (_('Path'), TEXT, None, None),
+        (_('Date'), TEXT, None, 9),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 10),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

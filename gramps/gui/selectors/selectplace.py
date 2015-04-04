@@ -58,11 +58,11 @@ class SelectPlace(BaseSelector):
 
     def get_column_titles(self):
         return [
-            (_('Name'),  200, BaseSelector.TEXT, 0),
-            (_('ID'),    75,  BaseSelector.TEXT, 1),
-            (_('Type'),  100, BaseSelector.TEXT, 3),
-            (_('Title'), 300, BaseSelector.TEXT, 2),
-            (_('Last Change'), 150, BaseSelector.TEXT, 9),
+            (_('Name'),  200, BaseSelector.TEXT, 0, 0),
+            (_('ID'),    75,  BaseSelector.TEXT, 1, 1),
+            (_('Type'),  100, BaseSelector.TEXT, 3, 3),
+            (_('Title'), 300, BaseSelector.TEXT, 2, 2),
+            (_('Last Change'), 150, BaseSelector.TEXT, 9, 13),
             ]
 
     def get_from_handle_func(self):

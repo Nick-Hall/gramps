@@ -79,14 +79,14 @@ class SourceView(ListView):
     
     # column definitions
     COLUMNS = [
-        (_('Title'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Author'), TEXT, None),
-        (_('Abbreviation'), TEXT, None),
-        (_('Publication Information'), TEXT, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
+        (_('Title'), TEXT, None, None),
+        (_('ID'), TEXT, None, None),
+        (_('Author'), TEXT, None, None),
+        (_('Abbreviation'), TEXT, None, None),
+        (_('Publication Information'), TEXT, None, None),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 9),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

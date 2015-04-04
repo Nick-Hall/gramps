@@ -57,9 +57,9 @@ class SelectRepository(BaseSelector):
 
     def get_column_titles(self):
         return [
-            (_('Title'), 350, BaseSelector.TEXT, 0),
-            (_('ID'),     75, BaseSelector.TEXT, 1),
-            (_('Last Change'), 150, BaseSelector.TEXT, 14),
+            (_('Title'), 350, BaseSelector.TEXT, 0, 0),
+            (_('ID'),     75, BaseSelector.TEXT, 1, 1),
+            (_('Last Change'), 150, BaseSelector.TEXT, 14, 16),
             ]
 
     def get_from_handle_func(self):

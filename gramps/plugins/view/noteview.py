@@ -76,12 +76,12 @@ class NoteView(ListView):
     
     # column definitions
     COLUMNS = [
-        (_('Preview'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Type'), TEXT, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
+        (_('Preview'), TEXT, None, None),
+        (_('ID'), TEXT, None, None),
+        (_('Type'), TEXT, None, None),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 7),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

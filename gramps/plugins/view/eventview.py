@@ -79,15 +79,15 @@ class EventView(ListView):
     COL_PARTIC = 8
     # column definitions
     COLUMNS = [
-        (_('Description'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Type'), TEXT, None),
-        (_('Date'), MARKUP, None),
-        (_('Place'), TEXT, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
-        (_('Main Participants'), TEXT, None),
+        (_('Description'), TEXT, None, None),
+        (_('ID'), TEXT, None, None),
+        (_('Type'), TEXT, None, None),
+        (_('Date'), MARKUP, None, 10),
+        (_('Place'), TEXT, None, None),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 11),
+        (_('Main Participants'), TEXT, None, None),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

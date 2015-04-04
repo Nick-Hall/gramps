@@ -231,7 +231,7 @@ class ListView(NavigationView):
         index = 0
         for pair in self.column_order():
             if not pair[0]: continue
-            col_name, col_type, col_icon = self.COLUMNS[pair[1]]
+            col_name, col_type, col_icon, col_sort = self.COLUMNS[pair[1]]
 
             if col_type == ICON:
                 column = Gtk.TreeViewColumn(col_name, self.pb_renderer)
@@ -253,8 +253,10 @@ class ListView(NavigationView):
             if self.model and self.model.color_column() is not None:
                 column.set_cell_data_func(self.renderer, self.foreground_color)
 
-            #column.connect('clicked', self.column_clicked, index)
-            column.set_sort_column_id(pair[1])
+            if col_sort is not None:
+                column.set_sort_column_id(col_sort)
+            else:
+                column.set_sort_column_id(pair[1])
 
             column.set_resizable(True)
             column.set_clickable(True)
@@ -320,9 +322,8 @@ class ListView(NavigationView):
                 if self.model:
                     self.list.set_model(None)
                     self.model.destroy()
-                self.model = self.make_model(self.dbstate.db, self.sort_col, 
-                                             search=filter_info,
-                                             sort_map=self.column_order())
+                self.model = self.make_model(self.dbstate.db, 
+                                             search=filter_info)
             else:
                 #the entire data to show is already in memory.
                 #run only the part that determines what to show

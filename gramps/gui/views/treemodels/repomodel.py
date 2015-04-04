@@ -49,10 +49,8 @@ from gramps.gen.const import GRAMPS_LOCALE as glocale
 #-------------------------------------------------------------------------
 class RepositoryModel(FlatBaseModel):
 
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, search=None, skip=set()):
         self.gen_cursor = db.get_repository_cursor
-        self.get_handles = db.get_repository_handles
         self.map = db.get_raw_repository_data
         self.fmap = [
             self.column_name,
@@ -73,27 +71,34 @@ class RepositoryModel(FlatBaseModel):
             self.column_tag_color
             ]
         
-        self.smap = [
-            self.column_name,
-            self.column_id,
-            self.column_type,
-            self.column_home_url,
-            self.column_street,
-            self.column_locality,
-            self.column_city,
-            self.column_state,
-            self.column_country,
-            self.column_postal_code,
-            self.column_email,
-            self.column_search_url,
-            self.column_private,
-            self.column_tags,
-            self.sort_change,           
-            self.column_tag_color
-            ]
+        self._column_types = [str, str, str, str, str, str, str, str, str, str,
+                              str, str, str, str, str, str, int, str]
         
-        FlatBaseModel.__init__(self, db, scol, order, search=search, skip=skip,
-                               sort_map=sort_map)
+        FlatBaseModel.__init__(self, db, search, skip)
+
+    def _get_row(self, data, handle):
+        row = [None] * len(self._column_types)
+        row[0] = self.column_name(data)
+        row[1] = self.column_id(data)
+        row[2] = self.column_type(data)
+        email, search, home = self._get_url(data)
+        row[3] = home
+        addr = self._get_address(data)
+        row[4] = addr.get_street()
+        row[5] = addr.get_locality()
+        row[6] = addr.get_city()
+        row[7] = addr.get_state()
+        row[8] = addr.get_country()
+        row[9] = addr.get_postal_code()
+        row[10] = email
+        row[11] = search
+        row[12] = self.column_private(data)
+        row[13] = self.column_tags(data)
+        row[14] = self.column_change(data)
+        row[15] = self.column_tag_color(data)
+        row[16] = self.sort_change(data)
+        row[17] = handle
+        return row
 
     def destroy(self):
         """
@@ -101,10 +106,8 @@ class RepositoryModel(FlatBaseModel):
         """
         self.db = None
         self.gen_cursor = None
-        self.get_handles = None
         self.map = None
         self.fmap = None
-        self.smap = None
         FlatBaseModel.destroy(self)
 
     def color_column(self):
@@ -113,114 +116,70 @@ class RepositoryModel(FlatBaseModel):
         """
         return 15
 
-    def on_get_n_columns(self):
-        return len(self.fmap)+1
+    def total(self):
+        """
+        Total number of items.
+        """
+        return self.db.get_number_of_repositories()
 
     def column_id(self,data):
-        return str(data[1])
+        return data[1]
 
     def column_type(self,data):
         return str(RepositoryType(data[2]))
 
     def column_name(self,data):
-        return str(data[3])
+        return data[3]
 
-    def column_city(self,data):
-        try:
-            if data[5]:
-                addr = Address()
-                addr.unserialize(data[5][0])
-                return addr.get_city()
-        except:
-            pass
-        return ''
+    def _get_address(self, data):
+        addr = Address()
+        if data[5]:
+            addr.unserialize(data[5][0])
+        return addr
 
-    def column_street(self,data):
-        try:
-            if data[5]:
-                addr = Address()
-                addr.unserialize(data[5][0])
-                return addr.get_street()
-        except:
-            pass
-        return ''
+    def column_city(self, data):
+        return self._get_address(data).get_city()
+
+    def column_street(self, data):
+        return self._get_address(data).get_street()
         
-    def column_locality(self,data):
-        try:
-            if data[5]:
-                addr = Address()
-                addr.unserialize(data[5][0])
-                return addr.get_locality()
-        except:
-            pass
-        return ''
+    def column_locality(self, data):
+        return self._get_address(data).get_locality()
     
-    def column_state(self,data):
-        try:
-            if data[5]:
-                addr = Address()
-                addr.unserialize(data[5][0])
-                return addr.get_state()
-        except:
-            pass
-        return ''
+    def column_state(self, data):
+        return self._get_address(data).get_state()
 
-    def column_country(self,data):
-        try:
-            if data[5]:
-                addr = Address()
-                addr.unserialize(data[5][0])
-                return addr.get_country()
-        except:
-            pass
-        return ''
+    def column_country(self, data):
+        return self._get_address(data).get_country()
 
-    def column_postal_code(self,data):
-        try:
-            if data[5]:
-                addr = Address()
-                addr.unserialize(data[5][0])
-                return addr.get_postal_code()
-        except:
-            pass
-        return ''
+    def column_postal_code(self, data):
+        return self._get_address(data).get_postal_code()
 
-    def column_phone(self,data):
-        try:
-            if data[5]:
-                addr = Address()
-                addr.unserialize(data[5][0])
-                return addr.get_phone()
-        except:
-            pass
-        return ''
+    def column_phone(self, data):
+        return self._get_address(data).get_phone()
 
-    def column_email(self,data):
+    def _get_url(self, data):
+        email = search = home = ''
         if data[6]:
             for i in data[6]:
                 url = Url()
                 url.unserialize(i)
                 if url.get_type() == UrlType.EMAIL:
-                    return str(url.path)
-        return ''
+                    email = url.path
+                elif url.get_type() == UrlType.WEB_SEARCH:
+                    search = url.path
+                elif url.get_type() == UrlType.WEB_HOME:
+                    home = url.path
+        return (email, search, home)
 
-    def column_search_url(self,data):
-        if data[6]:
-            for i in data[6]:
-                url = Url()
-                url.unserialize(i)
-                if url.get_type() == UrlType.WEB_SEARCH:
-                    return str(url.path)
-        return ''
+    def column_email(self, data):
+        return self._get_url(data)[0]
+
+    def column_search_url(self, data):
+        return self._get_url(data)[1]
     
-    def column_home_url(self,data):
-        if data[6]:
-            for i in data[6]:
-                url = Url()
-                url.unserialize(i)
-                if url.get_type() == UrlType.WEB_HOME:
-                    return str(url.path)
-        return ""
+    def column_home_url(self, data):
+        return self._get_url(data)[2]
 
     def column_private(self, data):
         if data[9]:
@@ -230,7 +189,7 @@ class RepositoryModel(FlatBaseModel):
             return ''
 
     def sort_change(self,data):
-        return "%012x" % data[7]
+        return data[7]
 
     def column_change(self,data):
         return format_time(data[7])

@@ -100,13 +100,8 @@ class BaseSelector(ManagedWindow):
 
         self.set_window(window,title_label,self.title)
         
-        #set up sorting
-        self.sort_col = 0
-        self.setupcols = True
-        self.columns = []
-        self.sortorder = Gtk.SortType.ASCENDING
-
         self.skip_list=skip
+        self.add_columns(self.tree)
         self.build_tree()
         self.selection = self.tree.get_selection()
         self.track_ref_for_deletion("selection")
@@ -130,23 +125,18 @@ class BaseSelector(ManagedWindow):
         """
         Goto the correct row.
         """
-        try: # tree:
-            path = None
-            node = self.model.get_node(handle)
-            if node:
-                parent_node = self.model.on_iter_parent(node)
-                if parent_node:
-                    parent_path = self.model.on_get_path(parent_node)
+        path = None
+        iter_ = self.model.get_iter_from_handle(handle)
+        if iter_:
+            if not self.model.get_flags() & Gtk.TreeModelFlags.LIST_ONLY:
+                parent_iter = self.model.iter_parent(iter_)
+                if parent_iter:
+                    parent_path = self.model.get_path(parent_iter)
                     if parent_path:
                         for i in range(len(parent_path)):
                             expand_path = tuple([x for x in parent_path[:i+1]])
                             self.tree.expand_row(expand_path, False)
-                path = self.model.on_get_path(node)
-        except: # flat:
-            try:
-                path = self.model.on_get_path(handle)
-            except:
-                path = None
+            path = self.model.get_path(iter_)
 
         if path is not None:
             self.selection.unselect_all()
@@ -170,11 +160,8 @@ class BaseSelector(ManagedWindow):
             column.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
             column.set_fixed_width(item[1])
             column.set_resizable(True)
-            #connect click
-            column.connect('clicked', self.column_clicked, ix)
-            column.set_clickable(True)
-            ##column.set_sort_column_id(ix) # model has its own sort implemented
-            self.columns.append(column)
+            if item[4] is not None:
+                column.set_sort_column_id(item[4])
             tree.append_column(column)           
         
     def build_menu_names(self, obj):
@@ -230,7 +217,7 @@ class BaseSelector(ManagedWindow):
         :returns: a list of tuples with four entries. The four entries should
                 be 0: column header string, 1: column width, 
                 2: TEXT, MARKUP or IMAGE, 3: column in the model that must be 
-                used.
+                used, 4: column in the model used for sorting.
         """
         raise NotImplementedError
 
@@ -286,61 +273,20 @@ class BaseSelector(ManagedWindow):
             else:
                 filter_info = (0, self.search_bar.get_value(), False)
 
-        #set up cols the first time
-        if self.setupcols :
-            self.add_columns(self.tree)
-
         #reset the model with correct sorting
         self.clear_model()
-        self.model = self.get_model_class()(self.db, self.sort_col,
-                                            self.sortorder,
-                                            sort_map=self.column_order(),
-                                            skip=self.skip_list,
+        self.model = self.get_model_class()(self.db, skip=self.skip_list,
                                             search=filter_info)
-        
         self.tree.set_model(self.model)
 
-        #sorting arrow in column header (not on start, only on click)
-        if not self.setupcols :
-            for i in range(len(self.columns)):
-                enable_sort_flag = (i==self.sort_col)
-                self.columns[i].set_sort_indicator(enable_sort_flag)
-            self.columns[self.sort_col].set_sort_order(self.sortorder)
-
-        # set the search column to be the sorted column
-        search_col = self.column_order()[self.sort_col][1]
+        # set the search column to be the first column
+        search_col = self.column_order()[0][1]
         self.tree.set_search_column(search_col)
         
-        self.setupcols = False
-        
-    def column_clicked(self, obj, data):
-        if self.sort_col != data:
-            self.sortorder = Gtk.SortType.ASCENDING
-            self.sort_col = data
-        else:
-            if (self.columns[data].get_sort_order() == Gtk.SortType.DESCENDING
-                or not self.columns[data].get_sort_indicator()):
-                self.sortorder = Gtk.SortType.ASCENDING
-            else:
-                self.sortorder = Gtk.SortType.DESCENDING
-            self.model.reverse_order()
-        self.build_tree()
-
-        handle = self.first_selected()
-        if handle:
-            path = self.model.on_get_path(handle)
-            self.selection.select_path(path)
-            self.tree.scroll_to_cell(path, None, 1, 0.5, 0)
-            
-        return True
-
     def show_toggle(self, obj):
         filter_info = None if obj.get_active() else self.filter
         self.clear_model()
-        self.model = self.get_model_class()(self.db, self.sort_col,
-                                            self.sortorder,
-                                            sort_map=self.column_order(),
-                                            skip=self.skip_list,
+        self.model = self.get_model_class()(self.db, skip=self.skip_list,
                                             search=filter_info)
         self.tree.set_model(self.model)
         self.tree.grab_focus()
@@ -359,7 +305,6 @@ class BaseSelector(ManagedWindow):
         self.clear_model()
         self.db = None
         self.tree = None
-        self.columns = None
         self.search_bar.destroy()
 
     def close(self, *obj):

@@ -42,19 +42,16 @@ _LOG = logging.getLogger(__name__)
 # GTK modules
 #
 #-------------------------------------------------------------------------
-from gi.repository import GObject
 from gi.repository import Gtk
 
 #-------------------------------------------------------------------------
 #
-# GRAMPS modules
+# Gramps modules
 #
 #-------------------------------------------------------------------------
 from gramps.gen.const import GRAMPS_LOCALE as glocale
 _ = glocale.translation.gettext
 import gramps.gui.widgets.progressdialog as progressdlg
-from .lru import LRU
-from bisect import bisect_right
 from gramps.gen.filters import SearchFilter, ExactSearchFilter
 
 #-------------------------------------------------------------------------
@@ -67,42 +64,20 @@ class TreeBaseModel(Gtk.TreeStore):
     The base class for all hierarchical treeview models.
     
     Creation:
-    db      :   the database
-    search         :  the search that must be shown
-    skip           :  values not to show
-    scol           :  column on which to sort
-    order          :  order of the sort
-    sort_map       :  mapping from columns seen on the GUI and the columns 
-                      as defined here
-    nrgroups       :  maximum number of grouping level, 0 = no group, 
-                      1= one group, .... Some optimizations can be for only
-                      one group. nrgroups=0 should never be used, as then a 
-                      flatbasemodel should be used
-    group_can_have_handle :
-                      can groups have a handle. If False, this means groups 
-                      are only used to group subnodes, not for holding data and
-                      showing subnodes
-    has_secondary  :  If True, the model contains two Gramps object types.
-                      The suffix '2' is appended to variables relating to the
-                      secondary object type.
+    db     :   the database
+    search :  the search that must be shown
+    skip   :  values not to show
     """
-    def __init__(self, db,
-                    search=None, skip=set(),
-                    scol=0, order=Gtk.SortType.ASCENDING, sort_map=None,
-                    nrgroups = 1,
-                    group_can_have_handle = False,
-                    has_secondary=False):
+    def __init__(self, db, search=None, skip=set()):
 
         Gtk.TreeStore.__init__(self)
-        self.set_column_types([str] * (len(self.fmap) + 1))
+        self.set_column_types(self._column_types)
 
         cput = time.clock()
 
         self.db = db
         self.skip = skip
-        self.exclude = [col[1] for col in sort_map if col[0] == 0]
         self.handle2iter = {}
-        self._in_build = False
 
         self._set_base_data()
         self.set_search(search)
@@ -129,11 +104,11 @@ class TreeBaseModel(Gtk.TreeStore):
           with the new entries
         """
         if search:
-            if search[0]:
+            if search[0] == 1: # Filter
                 #following is None if no data given in filter sidebar
                 self.search = search[1]
                 self.rebuild_data = self._rebuild_filter
-            else:
+            elif search[0] == 0: # Search
                 if search[1]: # Search from topbar in columns
                     # we have search[1] = (index, text_unicode, inversion)
                     col = search[1][0]
@@ -146,6 +121,9 @@ class TreeBaseModel(Gtk.TreeStore):
                         self.search = SearchFilter(func, text, inv)
                 else:
                     self.search = None
+                self.rebuild_data = self._rebuild_search
+            else: # Fast Filter
+                self.search = search[1]
                 self.rebuild_data = self._rebuild_search
         else:
             self.search = None
@@ -169,18 +147,11 @@ class TreeBaseModel(Gtk.TreeStore):
         """
         return None
 
-    def clear_cache(self, handle=None):
-        """
-        Clear the LRU cache.
-        """
-        pass
-
     def _rebuild_search(self):
         """ function called when view must be build, given a search text
             in the top search bar
         """
         self.clear()
-        self.clear_cache()
         self.handle2iter = {}
         if self.db.is_open():
             if self.search is not None:
@@ -200,7 +171,6 @@ class TreeBaseModel(Gtk.TreeStore):
             in the filter sidebar
         """
         self.clear()
-        self.clear_cache()
         self.handle2iter = {}
         if self.db.is_open():
             if self.search is not None:
@@ -219,13 +189,10 @@ class TreeBaseModel(Gtk.TreeStore):
     def _get_row(self, data, handle):
         row = []
         for col, col_func in enumerate(self.fmap):
-            if col in self.exclude:
-                row.append(None)
+            if col_func is not None:
+                row.append(col_func(data))
             else:
-                if col_func is not None:
-                    row.append(col_func(data))
-                else:
-                    row.append('')
+                row.append('')
         row.append(handle)
         return row
 
@@ -260,7 +227,6 @@ class TreeBaseModel(Gtk.TreeStore):
         """
         Update a row in the model.
         """
-        self.clear_cache(handle)
         iter = self.get_iter_from_handle(handle)
         self.set_row(iter, self.__get_row(self.map(handle), handle))
 
@@ -274,4 +240,4 @@ class TreeBaseModel(Gtk.TreeStore):
         """
         Get the gramps handle for an iter.
         """
-        return self.get_value(iter, len(self.fmap))
+        return self.get_value(iter, len(self._column_types) - 1)

@@ -95,20 +95,20 @@ class CitationListView(ListView):
     COL_SRC_CHAN       = 13
     # column definitions
     COLUMNS = [
-        (_('Volume/Page'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Date'), MARKUP, None),
-        (_('Confidence'), TEXT, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
-        (_('Source: Title'), TEXT, None),
-        (_('Source: ID'), TEXT, None),
-        (_('Source: Author'), TEXT, None),
-        (_('Source: Abbreviation'), TEXT, None),
-        (_('Source: Publication Information'), TEXT, None),
-        (_('Source: Private'), ICON, 'gramps-lock'),
-        (_('Source: Last Changed'), TEXT, None),
+        (_('Volume/Page'), TEXT, None, None),
+        (_('ID'), TEXT, None, None),
+        (_('Date'), MARKUP, None, 15),
+        (_('Confidence'), TEXT, None, None),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 16),
+        (_('Source: Title'), TEXT, None, None),
+        (_('Source: ID'), TEXT, None, None),
+        (_('Source: Author'), TEXT, None, None),
+        (_('Source: Abbreviation'), TEXT, None, None),
+        (_('Source: Publication Information'), TEXT, None, None),
+        (_('Source: Private'), ICON, 'gramps-lock', None),
+        (_('Source: Last Changed'), TEXT, None, 17),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

@@ -52,8 +52,7 @@ from gramps.gen.lib import (Note, NoteType, StyledText)
 class NoteModel(FlatBaseModel):
     """
     """
-    def __init__(self, db, scol=0, order=Gtk.SortType.ASCENDING, search=None,
-                 skip=set(), sort_map=None):
+    def __init__(self, db, search=None, skip=set()):
         """Setup initial values for instance variables."""
         self.gen_cursor = db.get_note_cursor
         self.map = db.get_raw_note_data
@@ -66,17 +65,23 @@ class NoteModel(FlatBaseModel):
             self.column_change,
             self.column_tag_color
         ]
-        self.smap = [
-            self.column_preview,
-            self.column_id,
-            self.column_type,
-            self.column_private,
-            self.column_tags,
-            self.sort_change,
-            self.column_tag_color
-        ]
-        FlatBaseModel.__init__(self, db, scol, order, search=search, skip=skip,
-                               sort_map=sort_map)
+
+        self._column_types = [str, str, str, str, str, str, str, int, str]
+
+        FlatBaseModel.__init__(self, db, search, skip)
+
+    def _get_row(self, data, handle):
+        row = [None] * len(self._column_types)
+        row[0] = self.column_preview(data)
+        row[1] = self.column_id(data)
+        row[2] = self.column_type(data)
+        row[3] = self.column_private(data)
+        row[4] = self.column_tags(data)
+        row[5] = self.column_change(data)
+        row[6] = self.column_tag_color(data)
+        row[7] = self.sort_change(data)
+        row[8] = handle
+        return row
 
     def destroy(self):
         """
@@ -86,7 +91,6 @@ class NoteModel(FlatBaseModel):
         self.gen_cursor = None
         self.map = None
         self.fmap = None
-        self.smap = None
         FlatBaseModel.destroy(self)
 
     def color_column(self):
@@ -95,19 +99,19 @@ class NoteModel(FlatBaseModel):
         """
         return 6
 
-    def on_get_n_columns(self):
-        """Return the column number of the Note tab."""
-        return len(self.fmap) + 1
+    def total(self):
+        """
+        Total number of items.
+        """
+        return self.db.get_number_of_notes()
 
     def column_id(self, data):
         """Return the id of the Note."""
-        return str(data[Note.POS_ID])
+        return data[Note.POS_ID]
 
     def column_type(self, data):
         """Return the type of the Note in readable format."""
-        temp = NoteType()
-        temp.set(data[Note.POS_TYPE])
-        return str(temp)
+        return str(NoteType(data[Note.POS_TYPE]))
 
     def column_preview(self, data):
         """Return a shortend version of the Note's text."""
@@ -128,7 +132,7 @@ class NoteModel(FlatBaseModel):
             return ''
 
     def sort_change(self, data):
-        return "%012x" % data[Note.POS_CHANGE]
+        return data[Note.POS_CHANGE]
     
     def column_change(self,data):
         return format_time(data[Note.POS_CHANGE])

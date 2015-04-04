@@ -84,6 +84,12 @@ class CitationBaseModel(object):
 
 # Fields access when 'data' is a Citation
 
+    def total(self):
+        """
+        Total number of items.
+        """
+        return self.db.get_number_of_citations()
+
     def citation_date(self, data):
         if data[COLUMN_DATE]:
             citation = Citation()
@@ -101,21 +107,17 @@ class CitationBaseModel(object):
         if data[COLUMN_DATE]:
             citation = Citation()
             citation.unserialize(data)
-            retval = "%09d" % citation.get_date_object().get_sort_value()
-            if not get_date_valid(citation):
-                return INVALID_DATE_FORMAT % retval
-            else:
-                return retval
-        return ''    
+            return citation.get_date_object().get_sort_value()
+        return 0    
     
     def citation_id(self, data):
-        return str(data[COLUMN_ID])
+        return data[COLUMN_ID]
 
     def citation_page(self, data):
-        return str(data[COLUMN_PAGE])
+        return data[COLUMN_PAGE]
 
     def citation_confidence(self, data):
-        return str(_(conf_strings[data[COLUMN_CONFIDENCE]]))
+        return _(conf_strings[data[COLUMN_CONFIDENCE]])
 
     def citation_private(self, data):
         if data[COLUMN_PRIV]:
@@ -150,7 +152,7 @@ class CitationBaseModel(object):
         return format_time(data[COLUMN_CHANGE])
     
     def citation_sort_change(self, data):
-        return "%012x" % data[COLUMN_CHANGE]
+        return data[COLUMN_CHANGE]
 
     def citation_source(self, data):
         return data[COLUMN_SOURCE]
@@ -159,7 +161,7 @@ class CitationBaseModel(object):
         source_handle = data[COLUMN_SOURCE]
         try:
             source = self.db.get_source_from_handle(source_handle)
-            return str(source.get_title())
+            return source.get_title()
         except:
             return ''
 
@@ -167,7 +169,7 @@ class CitationBaseModel(object):
         source_handle = data[COLUMN_SOURCE]
         try:
             source = self.db.get_source_from_handle(source_handle)
-            return str(source.gramps_id)
+            return source.gramps_id
         except:
             return ''
 
@@ -175,7 +177,7 @@ class CitationBaseModel(object):
         source_handle = data[COLUMN_SOURCE]
         try:
             source = self.db.get_source_from_handle(source_handle)
-            return str(source.get_author())
+            return source.get_author()
         except:
             return ''
 
@@ -183,7 +185,7 @@ class CitationBaseModel(object):
         source_handle = data[COLUMN_SOURCE]
         try:
             source = self.db.get_source_from_handle(source_handle)
-            return str(source.get_abbreviation())
+            return source.get_abbreviation()
         except:
             return ''
 
@@ -191,7 +193,7 @@ class CitationBaseModel(object):
         source_handle = data[COLUMN_SOURCE]
         try:
             source = self.db.get_source_from_handle(source_handle)
-            return str(source.get_publication_info())
+            return source.get_publication_info()
         except:
             return ''
 
@@ -227,19 +229,19 @@ class CitationBaseModel(object):
 # Fields access when 'data' is a Source
 
     def source_src_title(self, data):
-        return str(data[COLUMN2_TITLE])
+        return data[COLUMN2_TITLE]
 
     def source_src_id(self, data):
-        return str(data[COLUMN2_ID])
+        return data[COLUMN2_ID]
 
     def source_src_auth(self, data):
-        return str(data[COLUMN2_AUTHOR])
+        return data[COLUMN2_AUTHOR]
 
     def source_src_abbr(self, data):
-        return str(data[COLUMN2_ABBREV])
+        return data[COLUMN2_ABBREV]
 
     def source_src_pinfo(self, data):
-        return str(data[COLUMN2_PUBINFO])
+        return data[COLUMN2_PUBINFO]
 
     def source_src_private(self, data):
         if data[COLUMN2_PRIV]:
@@ -274,7 +276,7 @@ class CitationBaseModel(object):
         return format_time(data[COLUMN2_CHANGE])
 
     def source_sort2_change(self, data):
-        return "%012x" % data[COLUMN2_CHANGE]
+        return data[COLUMN2_CHANGE]
 
     def dummy_sort_key(self, data):
         # dummy sort key for columns that don't have data

@@ -76,14 +76,14 @@ class FamilyView(ListView):
     COL_CHAN = 7
     # column definitions
     COLUMNS = [
-        (_('ID'), TEXT, None),
-        (_('Father'), TEXT, None),
-        (_('Mother'), TEXT, None),
-        (_('Relationship'), TEXT, None),
-        (_('Marriage Date'), MARKUP, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
+        (_('ID'), TEXT, None, None),
+        (_('Father'), TEXT, None, 9),
+        (_('Mother'), TEXT, None, 10),
+        (_('Relationship'), TEXT, None, None),
+        (_('Marriage Date'), MARKUP, None, 11),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 12),
         ]
     #default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

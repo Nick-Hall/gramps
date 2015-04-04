@@ -62,11 +62,11 @@ class SelectNote(BaseSelector):
 
     def get_column_titles(self):
         return [
-            (_('Preview'), 350, BaseSelector.TEXT, 0),
-            (_('ID'),      75,  BaseSelector.TEXT, 1),
-            (_('Type'),    100, BaseSelector.TEXT, 2),
-            (_('Tags'),    100, BaseSelector.TEXT, 4),
-            (_('Last Change'), 150, BaseSelector.TEXT, 5),
+            (_('Preview'), 350, BaseSelector.TEXT, 0, 0),
+            (_('ID'),      75,  BaseSelector.TEXT, 1, 1),
+            (_('Type'),    100, BaseSelector.TEXT, 2, 2),
+            (_('Tags'),    100, BaseSelector.TEXT, 4, 4),
+            (_('Last Change'), 150, BaseSelector.TEXT, 5, 7),
             ]
             
     def get_from_handle_func(self):

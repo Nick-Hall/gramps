@@ -81,16 +81,16 @@ class PlaceBaseView(ListView):
     COL_CHAN = 9
     # column definitions
     COLUMNS = [
-        (_('Name'), TEXT, None),
-        (_('ID'), TEXT, None),
-        (_('Title'), TEXT, None),
-        (_('Type'), TEXT, None),
-        (_('Code'), TEXT, None),
-        (_('Latitude'), TEXT, None),
-        (_('Longitude'), TEXT, None),
-        (_('Private'), ICON, 'gramps-lock'),
-        (_('Tags'), TEXT, None),
-        (_('Last Changed'), TEXT, None),
+        (_('Name'), TEXT, None, None),
+        (_('ID'), TEXT, None, None),
+        (_('Title'), TEXT, None, None),
+        (_('Type'), TEXT, None, None),
+        (_('Code'), TEXT, None, None),
+        (_('Latitude'), TEXT, None, 11),
+        (_('Longitude'), TEXT, None, 12),
+        (_('Private'), ICON, 'gramps-lock', None),
+        (_('Tags'), TEXT, None, None),
+        (_('Last Changed'), TEXT, None, 13),
         ]
     # default setting with visible columns, order of the col, and their size
     CONFIGSETTINGS = (

@@ -71,15 +71,15 @@ class SelectPerson(BaseSelector):
 
     def get_column_titles(self):
         return [
-            (_('Name'),         250, BaseSelector.TEXT,   0),
-            (_('ID'),            75, BaseSelector.TEXT,   1),
-            (_('Gender'),        75, BaseSelector.TEXT,   2),
-            (_('Birth Date'),   150, BaseSelector.MARKUP, 3),
-            (_('Birth Place'),  150, BaseSelector.MARKUP, 4),
-            (_('Death Date'),   150, BaseSelector.MARKUP, 5),
-            (_('Death Place'),  150, BaseSelector.MARKUP, 6),
-            (_('Spouse'),       150, BaseSelector.TEXT,   7),
-            (_('Last Change'),  150, BaseSelector.TEXT,   14)
+            (_('Name'),         250, BaseSelector.TEXT,   0, 0),
+            (_('ID'),            75, BaseSelector.TEXT,   1, 1),
+            (_('Gender'),        75, BaseSelector.TEXT,   2, 2),
+            (_('Birth Date'),   150, BaseSelector.MARKUP, 3, 17),
+            (_('Birth Place'),  150, BaseSelector.MARKUP, 4, 4),
+            (_('Death Date'),   150, BaseSelector.MARKUP, 5, 18),
+            (_('Death Place'),  150, BaseSelector.MARKUP, 6, 6),
+            (_('Spouse'),       150, BaseSelector.TEXT,   7, 7),
+            (_('Last Change'),  150, BaseSelector.TEXT,   14, 19)
             ]
 
     def get_from_handle_func(self):
