@@ -101,7 +101,7 @@ class PeopleBaseModel(object):
         Initialize the model building the initial data
         """
         self.db = db
-        self.gen_cursor = db.get_person_cursor
+        self.ff = None
         self.map = db.get_raw_person_data
 
         self.fmap = [
@@ -126,6 +126,11 @@ class PeopleBaseModel(object):
         self._column_types = [str, str, str, str, str, str, str, str, int, int,
                               int, int, str, str, str, str, str, int, int, int,
                               str]
+
+    def gen_cursor(self):
+        for key, data in self.db.get_person_cursor():
+            if self.ff and self.ff.match(data, self.db):
+                yield key, data
 
     def _get_row(self, data, handle):
         row = [None] * len(self._column_types)
@@ -247,12 +252,12 @@ class PeopleBaseModel(object):
                 sortval = event.get_date_object().get_sort_value()
                 date_str = get_date(event)
                 if date_str != "":
-                    retval = cgi.escape(date_str)
+                    retval = escape(date_str)
                 if not get_date_valid(event):
                     retval = invalid_date_format % retval
                 place_title = place_displayer.display_event(self.db, event)
                 if place_title:
-                    place_title = "<i>%s</i>" % cgi.escape(place_title)
+                    place_title = "<i>%s</i>" % escape(place_title)
                 return (sortval, retval, place_title)
 
             except:
@@ -269,12 +274,12 @@ class PeopleBaseModel(object):
                 and date_str != ""):
 
                 sortval = event.get_date_object().get_sort_value()
-                retval = "<i>%s</i>" % cgi.escape(date_str)
+                retval = "<i>%s</i>" % escape(date_str)
                 if not get_date_valid(event):
                     retval = invalid_date_format % retval
                 place_title = place_displayer.display_event(self.db, event)
                 if place_title:
-                    place_title = "<i>%s</i>" % cgi.escape(place_title)
+                    place_title = "<i>%s</i>" % escape(place_title)
                 return (sortval, retval, place_title)
 
         return (0, '', '')

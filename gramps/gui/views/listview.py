@@ -148,6 +148,9 @@ class ListView(NavigationView):
                                     self.search_build_tree)
         filter_box = self.search_bar.build()
 
+        hbox = Gtk.Box()
+        self.build_fastfilter(hbox)
+
         self.list = Gtk.TreeView()
         self.list.set_headers_visible(True)
         self.list.set_headers_clickable(True)
@@ -178,8 +181,10 @@ class ListView(NavigationView):
         scrollwindow.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
         scrollwindow.add(self.list)
 
+        hbox.pack_start(scrollwindow, True, True, 0)
+
         self.vbox.pack_start(filter_box, False, True, 0)
-        self.vbox.pack_start(scrollwindow, True, True, 0)
+        self.vbox.pack_start(hbox, True, True, 0)
 
         self.renderer = Gtk.CellRendererText()
         self.renderer.set_property('ellipsize', Pango.EllipsizeMode.END)
@@ -193,6 +198,9 @@ class ListView(NavigationView):
 
         self.setup_filter()
         return self.vbox
+
+    def build_fastfilter(self, hbox):
+        pass
 
     def define_actions(self):
         """
@@ -392,6 +400,9 @@ class ListView(NavigationView):
         else:
             self.search_bar.show()
 
+    def select_fastfilter(self, handle):
+        pass
+
     ####################################################################
     # Navigation
     ####################################################################
@@ -414,6 +425,8 @@ class ListView(NavigationView):
         """
         if not handle or handle in self.selected_handles():
             return
+
+        self.select_fastfilter(handle)
 
         iter_ = self.model.get_iter_from_handle(handle)
         if iter_:

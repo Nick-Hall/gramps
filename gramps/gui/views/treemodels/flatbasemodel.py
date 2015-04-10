@@ -98,7 +98,10 @@ class FlatBaseModel(Gtk.ListStore):
             if search[0] == 1: # Filter
                 #following is None if no data given in filter sidebar
                 self.search = search[1]
-                self.rebuild_data = self._rebuild_filter
+                if self.search is None:
+                    self.rebuild_data = self._rebuild_all
+                else:
+                    self.rebuild_data = self._rebuild_filter
             elif search[0] == 0: # Search
                 if search[1]: # Search from topbar in columns
                     # we have search[1] = (index, text_unicode, inversion)
@@ -110,15 +113,16 @@ class FlatBaseModel(Gtk.ListStore):
                         self.search = ExactSearchFilter(func, text, inv)
                     else:
                         self.search = SearchFilter(func, text, inv)
+                    self.rebuild_data = self._rebuild_search
                 else:
                     self.search = None
-                self.rebuild_data = self._rebuild_search
+                    self.rebuild_data = self._rebuild_all
             else: # Fast Filter
                 self.search = search[1]
                 self.rebuild_data = self._rebuild_search
         else:
             self.search = None
-            self.rebuild_data = self._rebuild_filter
+            self.rebuild_data = self._rebuild_all
 
     def total(self):
         """
@@ -138,24 +142,39 @@ class FlatBaseModel(Gtk.ListStore):
         """
         return None
 
+    def apply_filter(self, pmon):
+        items = self.total()
+        status = progressdlg.LongOpStatus(msg=_("Applying Filter"),
+                            total_steps=items, interval=items//10)
+        pmon.add_op(status)
+        dlist = self.search.apply(self.db, cb_progress=status.heartbeat)
+        status.end()
+        return dlist
+
     def _rebuild_search(self):
         """ function called when view must be build, given a search text
             in the top search bar
         """
+        items = self.total()
+        pmon = progressdlg.ProgressMonitor(progressdlg.GtkProgressDialog, 
+                                            popup_time=2)
+        status = progressdlg.LongOpStatus(msg=_("Building View"),
+                            total_steps=items, interval=items//20, 
+                            can_cancel=True)
+        pmon.add_op(status)
         self.clear()
         self.handle2iter = {}
         if self.db.is_open():
-            if self.search is not None:
-                for key, data in self.gen_cursor():
-                    handle = key.decode('utf8')
-                    if (self.search.match(data, self.db) 
-                        and handle not in self.skip):
-                        self._add(data, handle)
-            else:
-                for key, data in self.gen_cursor():
-                    handle = key.decode('utf8')
+            for key, data in self.gen_cursor():
+                status.heartbeat()
+                if status.should_cancel():
+                    break
+                handle = key.decode('utf8')
+                if self.search.match(data, self.db):
                     if handle not in self.skip:
                         self._add(data, handle)
+            if not status.was_cancelled():
+                status.end()
 
     def _rebuild_filter(self):
         """ function called when view must be build, given filter options
@@ -164,18 +183,45 @@ class FlatBaseModel(Gtk.ListStore):
         self.clear()
         self.handle2iter = {}
         if self.db.is_open():
-            if self.search is not None:
-                dlist = self.search.apply(self.db)
-                for key, data in self.gen_cursor():
-                    if key in dlist:
-                        handle = key.decode('utf8')
-                        if handle not in self.skip:
-                            self._add(data, handle)
-            else:
-                for key, data in self.gen_cursor():
+            items = self.total()
+            pmon = progressdlg.ProgressMonitor(progressdlg.GtkProgressDialog, 
+                                               popup_time=2)
+            dlist = self.apply_filter(pmon)
+            items = self.total()
+            status = progressdlg.LongOpStatus(msg=_("Building View"),
+                                total_steps=items, interval=items//10)
+            pmon.add_op(status)
+            for key, data in self.gen_cursor():
+                status.heartbeat()
+                if status.should_cancel():
+                    break
+                if key in dlist:
                     handle = key.decode('utf8')
                     if handle not in self.skip:
                         self._add(data, handle)
+            if not status.was_cancelled():
+                status.end()
+
+    def _rebuild_all(self):
+        items = self.total()
+        pmon = progressdlg.ProgressMonitor(progressdlg.GtkProgressDialog, 
+                                            popup_time=2)
+        status = progressdlg.LongOpStatus(msg=_("Building View"),
+                            total_steps=items, interval=items//20, 
+                            can_cancel=True)
+        pmon.add_op(status)
+        self.clear()
+        self.handle2iter = {}
+        if self.db.is_open():
+            for key, data in self.gen_cursor():
+                status.heartbeat()
+                if status.should_cancel():
+                    break
+                handle = key.decode('utf8')
+                if handle not in self.skip:
+                    self._add(data, handle)
+            if not status.was_cancelled():
+                status.end()
 
     def _get_row(self, data, handle):
         row = []
@@ -221,3 +267,13 @@ class FlatBaseModel(Gtk.ListStore):
         Get the gramps handle for an iter.
         """
         return self.get_value(iter, len(self._column_types) - 1)
+
+class FastGroupAsFilter(object):
+
+    def __init__(self, db, handle_list):
+        self.db = db
+        self.group_as = group_as
+
+    def match(self, data, db):
+        group_as = name_displayer.name_grouping_data(self.db, data[3])
+        return group_as == self.group_as

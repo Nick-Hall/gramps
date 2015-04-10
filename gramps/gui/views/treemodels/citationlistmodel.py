@@ -59,7 +59,7 @@ class CitationListModel(CitationBaseModel, FlatBaseModel):
     """
     def __init__(self, db, search=None, skip=set()):
         self.map = db.get_raw_citation_data
-        self.gen_cursor = db.get_citation_cursor
+        self.ff = None
         self.fmap = [
             self.citation_page,
             self.citation_id,
@@ -82,6 +82,11 @@ class CitationListModel(CitationBaseModel, FlatBaseModel):
                               str, str, str, str, str, int, int, int, str]
 
         FlatBaseModel.__init__(self, db, search, skip)
+
+    def gen_cursor(self):
+        for key, data in self.db.get_citation_cursor():
+            if self.ff and self.ff.match(data, self.db):
+                yield key, data
 
     def _get_row(self, data, handle):
         row = [None] * len(self._column_types)

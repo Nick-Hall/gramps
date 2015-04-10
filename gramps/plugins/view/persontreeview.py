@@ -36,13 +36,12 @@ from gi.repository import Gtk
 # Gramps modules
 #
 #-------------------------------------------------------------------------
-from gramps.gui.views.listview import TEXT, MARKUP, ICON
 from gramps.plugins.lib.libpersonview import BasePersonView
-from gramps.gui.views.treemodels.peoplemodel import PersonTreeModel
+from gramps.gui.views.treemodels.peoplemodel import PersonListModel
 from gramps.gen.lib import Name, Person, Surname
 from gramps.gen.errors import WindowActiveError
 from gramps.gui.editors import EditPerson
-from gramps.gen.utils.db import preset_name
+from gramps.gen.display.name import displayer as name_displayer
 
 #-------------------------------------------------------------------------
 #
@@ -63,7 +62,7 @@ class PersonTreeView(BasePersonView):
     """
     def __init__(self, pdata, dbstate, uistate, nav_group=0):
         BasePersonView.__init__(self, pdata, dbstate, uistate,
-                               _('People Tree View'), PersonTreeModel,
+                               _('People Tree View'), PersonListModel,
                                nav_group=nav_group)
 
     def get_viewtype_stock(self):
@@ -71,110 +70,91 @@ class PersonTreeView(BasePersonView):
         Override the default icon.  Set for hierarchical view.
         """
         return 'gramps-tree-group'
-        
-    def define_actions(self):
-        """
-        Define actions for the popup menu specific to the tree view.
-        """
-        BasePersonView.define_actions(self)
-
-        self.all_action.add_actions([
-                ('OpenAllNodes', None, _("Expand all Nodes"), None, None, 
-                 self.open_all_nodes),  
-                ('CloseAllNodes', None, _("Collapse all Nodes"), None, None, 
-                 self.close_all_nodes), 
-                ])
-
-    def additional_ui(self):
-        """
-        Defines the UI string for UIManager
-        """
-        return '''<ui>
-          <menubar name="MenuBar">
-            <menu action="FileMenu">
-              <placeholder name="LocalExport">
-                <menuitem action="ExportTab"/>
-              </placeholder>
-            </menu>
-            <menu action="BookMenu">
-              <placeholder name="AddEditBook">
-                <menuitem action="AddBook"/>
-                <menuitem action="EditBook"/>
-              </placeholder>
-            </menu>
-            <menu action="GoMenu">
-              <placeholder name="CommonGo">
-                <menuitem action="Back"/>
-                <menuitem action="Forward"/>
-                <separator/>
-                <menuitem action="HomePerson"/>
-                <separator/>
-              </placeholder>
-            </menu>
-            <menu action="EditMenu">
-              <placeholder name="CommonEdit">
-                <menuitem action="Add"/>
-                <menuitem action="Edit"/>
-                <menuitem action="Remove"/>
-                <menuitem action="Merge"/>
-             </placeholder>
-              <menuitem action="SetActive"/>
-              <menuitem action="FilterEdit"/>
-            </menu>
-          </menubar>
-          <toolbar name="ToolBar">
-            <placeholder name="CommonNavigation">
-              <toolitem action="Back"/>  
-              <toolitem action="Forward"/>  
-              <toolitem action="HomePerson"/>
-            </placeholder>
-            <placeholder name="CommonEdit">
-              <toolitem action="Add"/>
-              <toolitem action="Edit"/>
-              <toolitem action="Remove"/>
-              <toolitem action="Merge"/>
-            </placeholder>
-          </toolbar>
-          <popup name="Popup">
-            <menuitem action="Back"/>
-            <menuitem action="Forward"/>
-            <menuitem action="HomePerson"/>
-            <separator/>
-            <menuitem action="OpenAllNodes"/>
-            <menuitem action="CloseAllNodes"/>
-            <separator/>
-            <menuitem action="Add"/>
-            <menuitem action="Edit"/>
-            <menuitem action="Remove"/>
-            <menuitem action="Merge"/>
-            <separator/>
-            <menu name="QuickReport" action="QuickReport"/>
-            <menu name="WebConnect" action="WebConnect"/>
-          </popup>
-        </ui>'''
 
     def add(self, obj):
-        person = Person()
-        
+
         # attempt to get the current surname
-        (model, pathlist) = self.selection.get_selected_rows()
+        group_as = ''
+        store, iter_ = self.fast_selection.get_selected()
+        if iter_:
+            group_as = store.get_value(iter_, 0)
+
+        person = Person()
         name = Name()
-        #the editor requires a surname
-        name.add_surname(Surname())
+        surname = Surname()
+        surname.set_surname(group_as)
+        name.add_surname(surname)
         name.set_primary_surname(0)
-        basepers = None
-        if len(pathlist) == 1:
-            path = pathlist[0]
-            pathids = path.get_indices()
-            if len(pathids) == 1:
-                path = Gtk.TreePath((pathids[0], 0))
-            iter_ = model.get_iter(path)
-            handle = model.get_handle_from_iter(iter_)
-            basepers = self.dbstate.db.get_person_from_handle(handle)
-        if basepers:
-            preset_name(basepers, name)
         person.set_primary_name(name)
         try:
             EditPerson(self.dbstate, self.uistate, [], person)
         except WindowActiveError:
             pass
+
+    def build_fastfilter(self, hbox):
+
+        treeview = Gtk.TreeView()
+
+        scrollwindow = Gtk.ScrolledWindow()
+        scrollwindow.set_policy(Gtk.PolicyType.NEVER,
+                                 Gtk.PolicyType.AUTOMATIC)
+        scrollwindow.set_shadow_type(Gtk.ShadowType.ETCHED_IN)
+        scrollwindow.add(treeview)
+
+        hbox.pack_start(scrollwindow, False, True, 0)
+
+        column = Gtk.TreeViewColumn(_('Group As'), self.renderer)
+        column.add_attribute(self.renderer, 'text', 0)
+        column.set_sort_column_id(0)
+        column.set_sizing(Gtk.TreeViewColumnSizing.FIXED)
+        column.set_fixed_width(150)
+        treeview.append_column(column)
+
+        self.fast_selection = treeview.get_selection()
+        self.fast_selection.connect('changed', self.selection_changed)
+
+        model = Gtk.ListStore(str)
+        ngn = name_displayer.name_grouping_data
+        self.group_names = {}
+        for key, data in self.dbstate.db.get_person_cursor():
+            group_name = ngn(self.dbstate.db, data[3])
+            if group_name not in self.group_names:
+                self.group_names[group_name] = model.append((group_name,))
+        treeview.set_model(model)
+
+        self.list2 = treeview
+        self.model2 = model
+
+    def selection_changed(self, selection):
+        store, iter_ = selection.get_selected()
+        if iter_:
+            group_as = store.get_value(iter_, 0)
+
+            self.list.set_model(None)
+            self.model.ff = FastGroupAsFilter(self.dbstate.db, group_as)
+            self.model.rebuild_data()
+            self.list.set_model(self.model)
+
+            self.uistate.show_filter_results(self.dbstate,
+                                             self.model.displayed(),
+                                             self.model.total())
+
+    def select_fastfilter(self, handle):
+        data = self.dbstate.db.get_raw_person_data(handle)
+        ngn = name_displayer.name_grouping_data
+        group_name = ngn(self.dbstate.db, data[3])
+        iter_ = self.group_names[group_name]
+        path = self.model2.get_path(iter_)
+        self.fast_selection.unselect_all()
+        self.fast_selection.select_path(path)
+        self.list2.scroll_to_cell(path, None, 1, 0.5, 0)
+
+class FastGroupAsFilter(object):
+
+    def __init__(self, db, group_as):
+        self.db = db
+        self.group_as = group_as
+
+    def match(self, data, db):
+        group_as = name_displayer.name_grouping_data(self.db, data[3])
+        return group_as == self.group_as
