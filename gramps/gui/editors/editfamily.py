@@ -1044,6 +1044,7 @@ class EditFamily(EditPrimary):
         #    RunDatabaseRepair(msg[1], parent=self.window)
 
     def __do_save(self):
+        self.update_object()
         self.ok_button.set_sensitive(False)
 
         if not self.added:

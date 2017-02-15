@@ -815,6 +815,7 @@ class EditPerson(EditPrimary):
         """
         Save the data.
         """
+        self.update_object()
         self.ok_button.set_sensitive(False)
         if self.object_is_empty():
             ErrorDialog(_("Cannot save person"),

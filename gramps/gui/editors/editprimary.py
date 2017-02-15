@@ -25,6 +25,8 @@
 #
 #-------------------------------------------------------------------------
 import abc
+import json
+import jsonpatch
 
 #-------------------------------------------------------------------------
 #
@@ -48,6 +50,7 @@ from ..utils import is_right_click
 from ..display import display_help
 from ..dialog import SaveDialog
 from gramps.gen.lib import PrimaryObject
+from gramps.gen.lib.serialize import to_json, from_json
 from ..dbguielement import DbGUIElement
 
 class EditPrimary(ManagedWindow, DbGUIElement, metaclass=abc.ABCMeta):
@@ -353,3 +356,13 @@ class EditPrimary(ManagedWindow, DbGUIElement, metaclass=abc.ABCMeta):
                 return (True, idval)
         else:
             return (False, 0)
+
+    def update_object(self):
+        if self.original:
+            old = json.loads(to_json(self.original))
+            new = json.loads(to_json(self.obj))
+            patch = jsonpatch.JsonPatch.from_diff(old, new)
+            print (patch)
+            latest = json.loads(to_json(self.get_from_handle(self.obj.handle)))
+            result = patch.apply(latest)
+            self.obj = from_json(json.dumps(result))
