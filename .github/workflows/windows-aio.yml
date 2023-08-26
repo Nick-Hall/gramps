@@ -37,8 +37,17 @@ jobs:
         update: true
     - name: Build
       run: |
-        cd aio
-        ./build.sh
+       DEV=$(grep -c '^DEV_VERSION.*True' gramps/version.py)
+       VER=$(grep "^VERSION_TUPLE" gramps/version.py|sed 's/.*(//;s/, */\./g;s/).*//')
+       QUAL=$(grep "^VERSION_QUALIFIER" gramps/version.py|sed 's/.*= "//;s/".*//')
+       if [ $DEV == '1' ]; then
+            BUILD=${GITHUB_SHA:0:8}
+       else
+            BUILD="1"
+       fi
+       VERSION=$VER$QUAL
+       cd aio
+       ./build.sh $VERSION $BUILD
     - uses: actions/upload-artifact@v3
       with:
         name: GrampsAIO
