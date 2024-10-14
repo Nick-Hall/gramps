@@ -4,7 +4,7 @@
 # Copyright (C) 2000-2007  Donald N. Allingham
 # Copyright (C) 2010       Michiel D. Nauta
 # Copyright (C) 2011       Tim G L Lyons
-# Copyright (C) 2017       Nick Hall
+# Copyright (C) 2017,2024  Nick Hall
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -135,6 +135,32 @@ class Event(
             TagBase.serialize(self),
             self.private,
         )
+
+    def get_object_state(self):
+        """
+        Get the current object state as a dictionary.
+
+        We override this method to handle the `type` and `description` properties.
+        """
+        attr_dict = super().get_object_state()
+        attr_dict["type"] = self.__type
+        attr_dict["description"] = self.__description
+        return attr_dict
+
+    def set_object_state(self, attr_dict):
+        """
+        Set the current object state using information provided in the given
+        dictionary.
+
+        We override this method to handle the `type` and `description` properties.
+        """
+        if "type" in attr_dict:
+            self.__type = attr_dict["type"]
+            del attr_dict["type"]
+        if "description" in attr_dict:
+            self.__description = attr_dict["description"]
+            del attr_dict["description"]
+        super().set_object_state(attr_dict)
 
     @classmethod
     def get_schema(cls):

@@ -1,8 +1,8 @@
 #
 # Gramps - a GTK+/GNOME based genealogy program
 #
-# Copyright (C) 2010,2017 Nick Hall
-# Copyright (C) 2013      Doug Blank <doug.blank@gmail.com>
+# Copyright (C) 2010,2017,2024  Nick Hall
+# Copyright (C) 2013            Doug Blank <doug.blank@gmail.com>
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -107,6 +107,38 @@ class Tag(TableObject):
             self.change,
         ) = data
         return self
+
+    def get_object_state(self):
+        """
+        Get the current object state as a dictionary.
+
+        We override this method to handle the `name`, `color` and `priority`
+        properties.
+        """
+        attr_dict = super().get_object_state()
+        attr_dict["name"] = self.__name
+        attr_dict["color"] = self.__color
+        attr_dict["priority"] = self.__priority
+        return attr_dict
+
+    def set_object_state(self, attr_dict):
+        """
+        Set the current object state using information provided in the given
+        dictionary.
+
+        We override this method to handle the `name`, `color` and `priority`
+        properties.
+        """
+        if "name" in attr_dict:
+            self.__name = attr_dict["name"]
+            del attr_dict["name"]
+        if "color" in attr_dict:
+            self.__color = attr_dict["color"]
+            del attr_dict["color"]
+        if "priority" in attr_dict:
+            self.__priority = attr_dict["priority"]
+            del attr_dict["priority"]
+        super().set_object_state(attr_dict)
 
     @classmethod
     def get_schema(cls):
