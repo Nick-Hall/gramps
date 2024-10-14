@@ -70,6 +70,18 @@ class StyledTextTag(BaseObject):
             # Current use of StyledTextTag is such that a shallow copy suffices.
             self.ranges = ranges
 
+    def get_object_state(self):
+        attr_dict = {"_class": self.__class__.__name__}
+        attr_dict["name"] = self.name
+        attr_dict["value"] = self.value
+        attr_dict["ranges"] = self.ranges
+        return attr_dict
+
+    def set_object_state(self, attr_dict):
+        self.name = attr_dict["name"]
+        self.value = attr_dict["value"]
+        self.ranges = [tuple(item) for item in attr_dict["ranges"]]
+
     def serialize(self):
         """Convert the object to a serialized tuple of data.
 

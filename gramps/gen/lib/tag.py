@@ -108,6 +108,25 @@ class Tag(TableObject):
         ) = data
         return self
 
+    def get_object_state(self):
+        attr_dict = super().get_object_state()
+        attr_dict["name"] = self.__name
+        attr_dict["color"] = self.__color
+        attr_dict["priority"] = self.__priority
+        return attr_dict
+
+    def set_object_state(self, attr_dict):
+        if "name" in attr_dict:
+            self.__name = attr_dict["name"]
+            del attr_dict["name"]
+        if "color" in attr_dict:
+            self.__color = attr_dict["color"]
+            del attr_dict["color"]
+        if "priority" in attr_dict:
+            self.__priority = attr_dict["priority"]
+            del attr_dict["priority"]
+        super().set_object_state(attr_dict)
+
     @classmethod
     def get_schema(cls):
         """

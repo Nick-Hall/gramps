@@ -322,6 +322,17 @@ class Person(
         TagBase.unserialize(self, tag_list)
         return self
 
+    def get_object_state(self):
+        attr_dict = super().get_object_state()
+        attr_dict["gender"] = self.__gender
+        return attr_dict
+
+    def set_object_state(self, attr_dict):
+        if "gender" in attr_dict:
+            self.__gender = attr_dict["gender"]
+            del attr_dict["gender"]
+        super().set_object_state(attr_dict)
+
     def _has_handle_reference(self, classname, handle):
         """
         Return True if the object has reference to a given handle of given

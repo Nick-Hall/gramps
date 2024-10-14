@@ -86,6 +86,16 @@ class EventRef(
             self.__role.serialize(),
         )
 
+    def get_object_state(self):
+        attr_dict = super().get_object_state()
+        attr_dict["role"] = self.__role
+        return attr_dict
+
+    def set_object_state(self, attr_dict):
+        self.__role = attr_dict["role"]
+        del attr_dict["role"]
+        super().set_object_state(attr_dict)
+
     @classmethod
     def get_schema(cls):
         """

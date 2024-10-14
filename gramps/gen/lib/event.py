@@ -136,6 +136,21 @@ class Event(
             self.private,
         )
 
+    def get_object_state(self):
+        attr_dict = super().get_object_state()
+        attr_dict["type"] = self.__type
+        attr_dict["description"] = self.__description
+        return attr_dict
+
+    def set_object_state(self, attr_dict):
+        if "type" in attr_dict:
+            self.__type = attr_dict["type"]
+            del attr_dict["type"]
+        if "description" in attr_dict:
+            self.__description = attr_dict["description"]
+            del attr_dict["description"]
+        super().set_object_state(attr_dict)
+
     @classmethod
     def get_schema(cls):
         """
