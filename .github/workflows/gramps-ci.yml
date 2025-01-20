@@ -73,4 +73,4 @@ jobs:
     - name: Run unit test suite
       run: |
         export GDK_BACKEND=-
-        python3 setup.py test
+        python3 setup.py -v test #verbose
