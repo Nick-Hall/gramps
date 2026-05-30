@@ -179,6 +179,7 @@ class DateDisplay:
             #
             # Not moving to DateStrings, as this is part of display code only,
             # coupled tightly with the formats used in this file.
+            # fmt: off
             "": _( # xgettext: no-python-brace-format
             "{long_month} {year}"),
             "from"
@@ -248,9 +249,11 @@ class DateDisplay:
             # else leave it untranslated
             : _( # xgettext: no-python-brace-format
             "{long_month} {year}", "calculated"),
+            # fmt: on
         }
 
         self.FORMATS_short_month_year = {
+            # fmt: off
             "": _( # xgettext: no-python-brace-format
             "{short_month} {year}"),
             "from"
@@ -320,6 +323,7 @@ class DateDisplay:
             # else leave it untranslated
             : _( # xgettext: no-python-brace-format
             "{short_month} {year}", "calculated"),
+            # fmt: on
         }
 
     def formats_changed(self):
